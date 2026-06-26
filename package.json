@@ -1,0 +1,68 @@
+{
+  "name": "saf-fleet",
+  "version": "1.0.0",
+  "description": "Self-hosted vehicle fleet manager — who has which vehicle, with usage history and white-labelling.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "author": "inoo (https://inoo.ch)",
+  "homepage": "https://inoo.ch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PascalEugster/SAF-fleet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PascalEugster/SAF-fleet/issues"
+  },
+  "scripts": {
+    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "devsafe": "rm -rf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "seed": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" tsx src/seed.ts",
+    "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
+    "check:publish": "bash scripts/check-publish.sh",
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start"
+  },
+  "dependencies": {
+    "@payloadcms/db-sqlite": "3.85.1",
+    "@payloadcms/next": "3.85.1",
+    "@payloadcms/richtext-lexical": "3.85.1",
+    "@payloadcms/translations": "3.85.1",
+    "@payloadcms/ui": "3.85.1",
+    "cross-env": "10.1.0",
+    "dotenv": "16.4.7",
+    "graphql": "^16.8.1",
+    "next": "16.2.9",
+    "payload": "3.85.1",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "sharp": "0.34.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "24.12.3",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "16.2.9",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^4.1.0",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=24.15.0",
+    "pnpm": "^9 || ^10"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "esbuild",
+      "unrs-resolver",
+      "better-sqlite3"
+    ]
+  }
+}

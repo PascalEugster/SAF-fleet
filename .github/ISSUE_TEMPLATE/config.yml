@@ -1,0 +1,9 @@
+# Set blank_issues_enabled to true if you also want a free-form issue option.
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation & installation
+    url: https://github.com/PascalEugster/SAF-fleet#readme
+    about: Setup and usage questions are usually answered in the README. (Update this URL to your repository.)
+  - name: 💬 Questions
+    url: https://inoo.ch
+    about: General questions about the project — built and maintained by inoo.

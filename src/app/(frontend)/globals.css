@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-army-red: #dc0018;
+  --color-army-red-dark: #b30014;
+  --color-ink: #1a1a1a;
+  --color-paper: #ffffff;
+  --color-mist: #f4f4f4;
+  --color-line: #d8d8d8;
+  --color-muted: #6b6b6b;
+
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, 'Segoe UI', system-ui, sans-serif;
+
+  --radius: 0px;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-mist);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  /* Links inherit text colour by default, but Tailwind text-* utilities
+     (e.g. text-white, text-army-red) must still win — hence @layer base. */
+  a {
+    color: inherit;
+  }
+}

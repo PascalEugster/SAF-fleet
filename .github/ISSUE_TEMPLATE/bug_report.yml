@@ -1,0 +1,82 @@
+name: 🐛 Bug report
+description: Report something that isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in as much as you can.
+        🇩🇪 Du darfst die Felder gern auf Deutsch ausfüllen.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected to happen instead.
+      placeholder: When I assign a vehicle to a person, the status doesn't change to "Im Einsatz"…
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can someone else trigger the same problem?
+      placeholder: |
+        1. Open a vehicle at /fahrzeuge/…
+        2. Pick a person in "Nutzer zuweisen"
+        3. Click "Zuweisen"
+        4. See …
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or error messages
+      description: Drag & drop images here, or paste any error text from the terminal/browser console.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      options:
+        - The public app (dashboard / vehicles / people)
+        - The admin area (/admin)
+        - During installation / starting the app
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Which version or git commit are you running? (see package.json or `git rev-parse --short HEAD`)
+      placeholder: "1.0.0 or commit abc1234"
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Node.js version (`node -v`), and browser.
+      placeholder: |
+        - OS: Windows 11 / macOS 15 / Ubuntu 24.04
+        - Node.js: v20.x
+        - Browser: Chrome 140
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I'm running this on a local PC or trusted intranet (not the public internet).
+          required: false

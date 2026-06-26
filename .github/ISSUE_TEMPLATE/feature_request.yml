@@ -1,0 +1,59 @@
+name: 💡 Feature request
+description: Suggest an idea or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Please describe the problem you're trying to solve, not only the solution.
+        🇩🇪 Du darfst die Felder gern auf Deutsch ausfüllen.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What are you trying to do, and what's getting in the way today?
+      placeholder: As a dispatcher, I want to export the current assignments so I can hand them to my commander…
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see happen?
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches or workarounds you've thought about.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      options:
+        - Dashboard / vehicle list
+        - Vehicle detail / assignment
+        - People
+        - White-labelling / branding
+        - Admin area
+        - Installation / setup
+        - Something else
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Fit with the project
+      options:
+        - label: This fits a local / intranet tool (not a hardened public-internet service).
+          required: false
+        - label: I searched existing issues and this hasn't been requested yet.
+          required: true
