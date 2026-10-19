@@ -15,6 +15,18 @@ vehicles, machines, tools or equipment.
 
 ---
 
+## 📦 Project status
+
+This project is **no longer under active development**. The code stays available
+under the MIT licence, as is — you are welcome to use, fork and adapt it. Issues
+and pull requests may not get a response, and no further features or updates are
+planned.
+
+> 🇩🇪 Das Projekt wird nicht mehr weiterentwickelt. Der Code bleibt unter der
+> MIT-Lizenz frei verfügbar — so wie er ist.
+
+---
+
 ## ⚠️ Important disclaimer
 
 - This is an **independent prototype**. It is **not** affiliated with, endorsed by,
