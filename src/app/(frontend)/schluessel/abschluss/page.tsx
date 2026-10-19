@@ -79,11 +79,8 @@ export default async function KeyHandoverPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <Link href="/schluessel" className="text-sm text-muted hover:text-army-red hover:underline">
-        ← Zurück zum Schlüsselbrett
-      </Link>
 
-      <div className="mt-4 border-b border-line pb-6">
+      <div className="border-b border-line pb-6">
         <h1 className="text-2xl font-bold tracking-tight">Tagesabschluss und Wachübergabe</h1>
         <p className="mt-1 text-muted">
           Alles was draussen ist, überfällige zuoberst. Zurücknehmen oder übergeben.

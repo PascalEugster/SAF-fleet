@@ -56,11 +56,8 @@ export default async function KeyLabelsPage({ searchParams }: { searchParams: Se
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="print:hidden">
-        <Link href="/schluessel" className="text-sm text-muted hover:text-army-red hover:underline">
-          ← Zurück zum Schlüsselbrett
-        </Link>
 
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Schlüsselanhänger drucken</h1>
             <p className="mt-1 text-muted">

@@ -299,6 +299,9 @@ Vier Kacheln zusätzlich zum Fahrzeugblock: **Ausgegeben** · **Überfällig** (
 
 ### 6.3 Bedienprinzipien
 
+- **Eine Navigationsebene je Domäne.** Kopfzeile: Fahrzeuge · Schlüssel · Personen. Innerhalb des Schlüsselbereichs eine Unternavigation über alle sieben Screens, mit Zähler auf «Abschluss» (überfällig) und «Vorfälle» (offen). Die aktive Stelle ist immer markiert.
+- **Filter ohne Serverrunde.** Der Bestand liegt ohnehin vollständig auf der Seite, also filtern Suche, Status, Typ und Kategorie im Browser — jeder Tastendruck wirkt sofort. Die Trefferzahl steht auf dem Filter selbst, deshalb gibt es keine separate Zählerreihe mehr. Die Adresszeile wird mitgeführt, damit eine gefilterte Ansicht teilbar bleibt.
+- **Suche über alles, was auf dem Anhänger oder im Kopf steht**: Nummer, Raum, Platz am Brett, Marke und Name des Inhabers.
 - **Zwei Taps pro Vorgang.** Alles andere ist Default: Frist = Dienstschluss, Ausgeber = angemeldete Person, Grund optional.
 - **Tastatur und Scanner zuerst.** Jede Liste hat ein Suchfeld mit Autofokus; ein Barcode-Scanner tippt nur Text und funktioniert damit ohne Zusatzcode.
 - **Blockaden erklären, nicht nur verbieten.** «Nicht möglich: Wm Keller hat keine gültige PSP (Schutzzone 2 erforderlich, abgelaufen 30.06.2026).»

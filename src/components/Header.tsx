@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import React from 'react'
 import { SwissCross } from './SwissCross'
+import { NavLink, type NavItem } from './NavLink'
 import type { Branding } from '@/lib/branding'
 
-const NAV = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/schluessel', label: 'Schlüsselbrett' },
-  { href: '/fahrzeuge/neu', label: 'Fahrzeug erfassen' },
+// One entry per domain. Actions like "Fahrzeug erfassen" live on their page.
+const NAV: NavItem[] = [
+  { href: '/', label: 'Fahrzeuge', match: ['/fahrzeuge'] },
+  { href: '/schluessel', label: 'Schlüssel' },
   { href: '/personen', label: 'Personen' },
 ]
 
@@ -57,13 +58,7 @@ export function Header({ branding }: { branding: Branding }) {
       <nav className="border-t border-line">
         <div className="mx-auto flex max-w-6xl gap-0 px-4">
           {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-ink hover:border-army-red hover:text-army-red"
-            >
-              {item.label}
-            </Link>
+            <NavLink key={item.href} item={item} />
           ))}
         </div>
       </nav>

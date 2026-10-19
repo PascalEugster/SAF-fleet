@@ -42,11 +42,8 @@ export default async function KeyInventoryPage({ searchParams }: { searchParams:
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link href="/schluessel" className="text-sm text-muted hover:text-army-red hover:underline">
-        ← Zurück zum Schlüsselbrett
-      </Link>
 
-      <div className="mt-4 border-b border-line pb-6">
+      <div className="border-b border-line pb-6">
         <h1 className="text-2xl font-bold tracking-tight">Inventur / Schlüsselrapport</h1>
         <p className="mt-1 text-muted">
           Brett durchgehen und nur ankreuzen, was fehlt. Alles andere gilt als am erwarteten Ort

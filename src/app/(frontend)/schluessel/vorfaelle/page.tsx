@@ -70,11 +70,8 @@ export default async function KeyIncidentsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link href="/schluessel" className="text-sm text-muted hover:text-army-red hover:underline">
-        ← Zurück zum Schlüsselbrett
-      </Link>
 
-      <div className="mt-4 border-b border-line pb-6">
+      <div className="border-b border-line pb-6">
         <h1 className="text-2xl font-bold tracking-tight">Vorfälle</h1>
         <p className="mt-1 text-muted">
           Verlust, Diebstahl und Defekt. Die Folgenabschätzung ergibt sich aus der Hierarchiestufe
