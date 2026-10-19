@@ -69,6 +69,12 @@ export interface Config {
   collections: {
     vehicles: Vehicle;
     categories: Category;
+    keys: Key;
+    'key-copies': KeyCopy;
+    'key-bundles': KeyBundle;
+    'key-categories': KeyCategory;
+    'locking-systems': LockingSystem;
+    'key-events': KeyEvent;
     users: User;
     media: Media;
     'payload-kv': PayloadKv;
@@ -80,6 +86,12 @@ export interface Config {
   collectionsSelect: {
     vehicles: VehiclesSelect<false> | VehiclesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    keys: KeysSelect<false> | KeysSelect<true>;
+    'key-copies': KeyCopiesSelect<false> | KeyCopiesSelect<true>;
+    'key-bundles': KeyBundlesSelect<false> | KeyBundlesSelect<true>;
+    'key-categories': KeyCategoriesSelect<false> | KeyCategoriesSelect<true>;
+    'locking-systems': LockingSystemsSelect<false> | LockingSystemsSelect<true>;
+    'key-events': KeyEventsSelect<false> | KeyEventsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -226,6 +238,22 @@ export interface User {
       )
     | null;
   unit?: string | null;
+  /**
+   * Relevant for permanently issued depot keys.
+   */
+  serviceFunction?: string | null;
+  /**
+   * Without a valid screening, zone 2 and 3 keys cannot be issued.
+   */
+  pspLevel?: ('keine' | 'psp' | 'psp_erweitert' | 'psp_mit_befragung') | null;
+  /**
+   * Empty = open-ended.
+   */
+  pspValidUntil?: string | null;
+  /**
+   * All keys must be returned by this date.
+   */
+  serviceEnd?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -244,6 +272,188 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * A key here is the lock/door, not the physical item. Assignable items live in "Key copies".
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "keys".
+ */
+export interface Key {
+  id: number;
+  keyNumber: string;
+  label: string;
+  category: number | KeyCategory;
+  lockingSystem?: (number | null) | LockingSystem;
+  /**
+   * Determines loss impact. The physical tag is never labelled "GHS".
+   */
+  hierarchy: 'ES' | 'GS' | 'HS' | 'GHS';
+  risk: 'normal' | 'erhoeht' | 'hoch';
+  opensLocation?: string | null;
+  /**
+   * Access to zone 2 or 3 requires a personnel security screening.
+   */
+  protectionZone: 'keine' | 'zone1' | 'zone2' | 'zone3';
+  /**
+   * Set automatically for zones 2 and 3.
+   */
+  requiresPsp?: boolean | null;
+  /**
+   * Set automatically for high risk.
+   */
+  requiresFourEyes?: boolean | null;
+  image?: (number | null) | Media;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Separate categories for keys, kept apart from vehicle categories.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-categories".
+ */
+export interface KeyCategory {
+  id: number;
+  name: string;
+  icon?: string | null;
+  sortOrder?: number | null;
+  /**
+   * Suggested default for new keys in this category.
+   */
+  defaultRisk: 'normal' | 'erhoeht' | 'hoch';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locking-systems".
+ */
+export interface LockingSystem {
+  id: number;
+  name: string;
+  location?: string | null;
+  manufacturer?: string | null;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * The physical item. Hand-over always happens here, unless it belongs to a bundle.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-copies".
+ */
+export interface KeyCopy {
+  id: number;
+  /**
+   * Derived from key and copy number.
+   */
+  label?: string | null;
+  key: number | Key;
+  copyNumber: number;
+  medium: 'mechanisch' | 'badge' | 'transponder' | 'code' | 'vorhaengeschloss';
+  /**
+   * Driven by issue/return. Only blocked, lost and defective are set by hand.
+   */
+  status: 'am_brett' | 'ausgegeben' | 'dauerausgabe' | 'versiegelt' | 'gesperrt' | 'verloren' | 'defekt';
+  storageSlot?: string | null;
+  tagNumber?: string | null;
+  /**
+   * Copies in a bundle are only issued through the bundle.
+   */
+  bundle?: (number | null) | KeyBundle;
+  seal?: {
+    sealed?: boolean | null;
+    sealNumber?: string | null;
+    sealedAt?: string | null;
+  };
+  /**
+   * Leave empty to take the key back.
+   */
+  currentHolder?: (number | null) | User;
+  currentReason?: string | null;
+  /**
+   * Empty = permanent issue (no due date).
+   */
+  dueAt?: string | null;
+  assignedAt?: string | null;
+  issuedBy?: (number | null) | User;
+  /**
+   * Required for four-eyes keys.
+   */
+  secondSignature?: (number | null) | User;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-bundles".
+ */
+export interface KeyBundle {
+  id: number;
+  label: string;
+  tagNumber?: string | null;
+  /**
+   * These copies are issued and returned together.
+   */
+  copies?: (number | KeyCopy)[] | null;
+  /**
+   * Leave empty to take the whole bundle back.
+   */
+  currentHolder?: (number | null) | User;
+  currentReason?: string | null;
+  dueAt?: string | null;
+  assignedAt?: string | null;
+  issuedBy?: (number | null) | User;
+  secondSignature?: (number | null) | User;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Complete log. Entries cannot be edited after the fact.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-events".
+ */
+export interface KeyEvent {
+  id: number;
+  at: string;
+  type:
+    | 'ausgabe'
+    | 'ruecknahme'
+    | 'bund_ausgabe'
+    | 'bund_ruecknahme'
+    | 'siegel_gebrochen'
+    | 'verlust'
+    | 'sperrung'
+    | 'freigabe'
+    | 'inventur'
+    | 'uebergabe'
+    | 'status_wechsel';
+  copy?: (number | null) | KeyCopy;
+  bundle?: (number | null) | KeyBundle;
+  keyLabel?: string | null;
+  person?: (number | null) | User;
+  personName?: string | null;
+  actor?: (number | null) | User;
+  actorName?: string | null;
+  reason?: string | null;
+  dueAt?: string | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -276,6 +486,30 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'categories';
         value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'keys';
+        value: number | Key;
+      } | null)
+    | ({
+        relationTo: 'key-copies';
+        value: number | KeyCopy;
+      } | null)
+    | ({
+        relationTo: 'key-bundles';
+        value: number | KeyBundle;
+      } | null)
+    | ({
+        relationTo: 'key-categories';
+        value: number | KeyCategory;
+      } | null)
+    | ({
+        relationTo: 'locking-systems';
+        value: number | LockingSystem;
+      } | null)
+    | ({
+        relationTo: 'key-events';
+        value: number | KeyEvent;
       } | null)
     | ({
         relationTo: 'users';
@@ -367,12 +601,128 @@ export interface CategoriesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "keys_select".
+ */
+export interface KeysSelect<T extends boolean = true> {
+  keyNumber?: T;
+  label?: T;
+  category?: T;
+  lockingSystem?: T;
+  hierarchy?: T;
+  risk?: T;
+  opensLocation?: T;
+  protectionZone?: T;
+  requiresPsp?: T;
+  requiresFourEyes?: T;
+  image?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-copies_select".
+ */
+export interface KeyCopiesSelect<T extends boolean = true> {
+  label?: T;
+  key?: T;
+  copyNumber?: T;
+  medium?: T;
+  status?: T;
+  storageSlot?: T;
+  tagNumber?: T;
+  bundle?: T;
+  seal?:
+    | T
+    | {
+        sealed?: T;
+        sealNumber?: T;
+        sealedAt?: T;
+      };
+  currentHolder?: T;
+  currentReason?: T;
+  dueAt?: T;
+  assignedAt?: T;
+  issuedBy?: T;
+  secondSignature?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-bundles_select".
+ */
+export interface KeyBundlesSelect<T extends boolean = true> {
+  label?: T;
+  tagNumber?: T;
+  copies?: T;
+  currentHolder?: T;
+  currentReason?: T;
+  dueAt?: T;
+  assignedAt?: T;
+  issuedBy?: T;
+  secondSignature?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-categories_select".
+ */
+export interface KeyCategoriesSelect<T extends boolean = true> {
+  name?: T;
+  icon?: T;
+  sortOrder?: T;
+  defaultRisk?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locking-systems_select".
+ */
+export interface LockingSystemsSelect<T extends boolean = true> {
+  name?: T;
+  location?: T;
+  manufacturer?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-events_select".
+ */
+export interface KeyEventsSelect<T extends boolean = true> {
+  at?: T;
+  type?: T;
+  copy?: T;
+  bundle?: T;
+  keyLabel?: T;
+  person?: T;
+  personName?: T;
+  actor?: T;
+  actorName?: T;
+  reason?: T;
+  dueAt?: T;
+  meta?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   rank?: T;
   unit?: T;
+  serviceFunction?: T;
+  pspLevel?: T;
+  pspValidUntil?: T;
+  serviceEnd?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

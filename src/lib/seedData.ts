@@ -1,12 +1,44 @@
 import type { Payload, PayloadRequest } from 'payload'
+import { seedKeys } from './seedKeys'
 
 type SeedOpts = { req?: PayloadRequest }
 
 const PEOPLE = [
-  { name: 'Hans Muster', rank: 'Wachtmeister', unit: 'Pz Bat 12', email: 'hans.muster@vtg.admin.ch' },
-  { name: 'Anna Bühler', rank: 'Leutnant', unit: 'Log Bat 1', email: 'anna.buehler@vtg.admin.ch' },
-  { name: 'Marco Rossi', rank: 'Korporal', unit: 'Geb Inf Bat 30', email: 'marco.rossi@vtg.admin.ch' },
-  { name: 'Sophie Favre', rank: 'Hauptmann', unit: 'Pz Bat 12', email: 'sophie.favre@vtg.admin.ch' },
+  {
+    name: 'Hans Muster',
+    rank: 'Wachtmeister',
+    unit: 'Pz Bat 12',
+    email: 'hans.muster@vtg.admin.ch',
+    serviceFunction: 'Wachtmeister Wache',
+    pspLevel: 'psp',
+    pspValidUntil: '2028-12-31',
+  },
+  {
+    name: 'Anna Bühler',
+    rank: 'Leutnant',
+    unit: 'Log Bat 1',
+    email: 'anna.buehler@vtg.admin.ch',
+    serviceFunction: 'Fourier',
+    pspLevel: 'psp_erweitert',
+    pspValidUntil: '2029-06-30',
+  },
+  {
+    // No security screening on purpose: shows the PSP gate blocking a hand-over.
+    name: 'Marco Rossi',
+    rank: 'Korporal',
+    unit: 'Geb Inf Bat 30',
+    email: 'marco.rossi@vtg.admin.ch',
+    pspLevel: 'keine',
+  },
+  {
+    name: 'Sophie Favre',
+    rank: 'Hauptmann',
+    unit: 'Pz Bat 12',
+    email: 'sophie.favre@vtg.admin.ch',
+    serviceFunction: 'Kp Kdt',
+    pspLevel: 'psp_mit_befragung',
+    pspValidUntil: '2030-01-31',
+  },
 ] as const
 
 const CATEGORIES = [
@@ -41,7 +73,16 @@ export async function seedDatabase(payload: Payload, { req }: SeedOpts = {}) {
       depth: 0,
       req,
     })
-    if (found.totalDocs > 0) return found.docs[0]
+    if (found.totalDocs > 0) {
+      // Keep security fields current for databases seeded before they existed.
+      const { email: _email, password: _password, ...rest } = data
+      return payload.update({
+        collection: 'users',
+        id: found.docs[0].id,
+        data: rest as never,
+        req,
+      })
+    }
     return payload.create({ collection: 'users', data: data as never, req })
   }
 
@@ -145,8 +186,13 @@ export async function seedDatabase(payload: Payload, { req }: SeedOpts = {}) {
     })
   }
 
+  const keys = await seedKeys(payload, { req, userIds })
+
   return {
     users: Object.keys(userIds).length + 1,
     vehicles: Object.keys(vehicleIds).length,
+    keys: keys.keys,
+    keyCopies: keys.copies,
+    keyBundles: keys.bundles,
   }
 }

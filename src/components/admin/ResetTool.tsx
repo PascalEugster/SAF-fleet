@@ -8,6 +8,7 @@ const TARGETS = [
   { key: 'history', label: 'Nutzungshistorie & Zuweisungen', hint: 'Setzt alle Fahrzeuge auf «verfügbar» und leert die Historie.' },
   { key: 'media', label: 'Medien', hint: 'Löscht alle hochgeladenen Bilder (inkl. Logo).' },
   { key: 'categories', label: 'Kategorien', hint: 'Löscht alle Kategorien (und die zugehörigen Fahrzeuge).' },
+  { key: 'keys', label: 'Schlüssel', hint: 'Löscht Schliessungen, Exemplare, Bünde, Journal und Schlüsselkategorien.' },
 ] as const
 
 const CONFIRM_WORD = 'RESET'
@@ -63,13 +64,22 @@ export function ResetTool() {
         persons: 'Personen',
         media: 'Medien',
         categories: 'Kategorien',
+        keys: 'Schliessungen',
+        'key-copies': 'Schlüsselexemplare',
+        'key-bundles': 'Schlüsselbünde',
+        'key-events': 'Journaleinträge',
+        'key-categories': 'Schlüsselkategorien',
+        'locking-systems': 'Schliessanlagen',
       }
       const parts: string[] = []
       for (const [k, v] of Object.entries(data.deleted ?? {})) {
         if (k === 'history') parts.push(`${v} Fahrzeuge bereinigt`)
         else parts.push(`${v} ${LABELS[k] ?? k} gelöscht`)
       }
-      if (data.reseeded) parts.push(`Beispieldaten geladen (${data.reseeded.vehicles} Fahrzeuge, ${data.reseeded.users} Personen)`)
+      if (data.reseeded)
+        parts.push(
+          `Beispieldaten geladen (${data.reseeded.vehicles} Fahrzeuge, ${data.reseeded.users} Personen, ${data.reseeded.keyCopies} Schlüsselexemplare)`,
+        )
       setResult(parts.length ? parts.join(' · ') : 'Fertig.')
       setSelected(new Set())
       setReseed(false)

@@ -7,7 +7,10 @@ async function seed() {
   const payload = await getPayload({ config: await config })
   payload.logger.info('Seeding…')
   const result = await seedDatabase(payload)
-  payload.logger.info(`Seed abgeschlossen ✔ (${result.vehicles} Fahrzeuge, ${result.users} Personen)`)
+  payload.logger.info(
+    `Seed abgeschlossen ✔ (${result.vehicles} Fahrzeuge, ${result.users} Personen, ` +
+      `${result.keys} Schliessungen / ${result.keyCopies} Exemplare, ${result.keyBundles} Bünde)`,
+  )
   process.exit(0)
 }
 

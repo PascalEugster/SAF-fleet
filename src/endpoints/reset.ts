@@ -1,12 +1,12 @@
 import { addDataAndFileToRequest, type Endpoint } from 'payload'
 import { seedDatabase } from '../lib/seedData'
 
-const ALL = ['vehicles', 'persons', 'history', 'media', 'categories'] as const
+const ALL = ['vehicles', 'persons', 'history', 'media', 'categories', 'keys'] as const
 type Target = (typeof ALL)[number]
 
 /**
  * POST /api/reset — wipe selected data (and optionally reseed). Admin-only.
- * Body: { targets: ('vehicles'|'persons'|'history'|'media'|'all')[], reseed?: boolean }
+ * Body: { targets: ('vehicles'|'persons'|'history'|'media'|'categories'|'keys'|'all')[], reseed?: boolean }
  *
  * The currently logged-in user is always preserved so you don't lock yourself out.
  */
@@ -38,6 +38,7 @@ export const resetEndpoint: Endpoint = {
     const wantHistory = targets.includes('history')
     const wantMedia = targets.includes('media')
     const wantCategories = targets.includes('categories')
+    const wantKeys = targets.includes('keys')
 
     try {
       if (wantVehicles) {
@@ -73,6 +74,35 @@ export const resetEndpoint: Endpoint = {
             req,
           })
         }
+      }
+
+      if (wantKeys) {
+        // Journal first, then the things it points at, then the stammdaten.
+        for (const collection of [
+          'key-events',
+          'key-bundles',
+          'key-copies',
+          'keys',
+          'key-categories',
+          'locking-systems',
+        ] as const) {
+          const res = await payload.delete({ collection, where: { id: { exists: true } }, req })
+          deleted[collection] = res.docs?.length ?? 0
+        }
+      } else if (wantPersons) {
+        // Release keys held by people that are about to be deleted.
+        await payload.update({
+          collection: 'key-bundles',
+          where: { currentHolder: { not_equals: req.user.id } },
+          data: { currentHolder: null },
+          req,
+        })
+        await payload.update({
+          collection: 'key-copies',
+          where: { currentHolder: { not_equals: req.user.id } },
+          data: { currentHolder: null },
+          req,
+        })
       }
 
       if (wantPersons) {

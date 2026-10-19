@@ -5,6 +5,8 @@ import config from '@/payload.config'
 import type { Category, Vehicle } from '@/payload-types'
 import { VehicleCard } from '@/components/VehicleCard'
 import { categoryId, STATUS_LABELS } from '@/lib/labels'
+import { keyStats } from '@/lib/keyQueries'
+import type { KeyCopy } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +18,30 @@ function Kpi({ label, value, accent }: { label: string; value: number; accent?: 
       <p className="text-3xl font-bold tabular-nums">{value}</p>
       <p className="mt-1 text-sm text-muted">{label}</p>
     </div>
+  )
+}
+
+function KeyKpi({
+  label,
+  value,
+  href,
+  warn,
+}: {
+  label: string
+  value: number
+  href: string
+  warn?: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className={`border border-line bg-paper p-4 transition hover:border-army-red ${
+        warn && value > 0 ? 'border-l-4 border-l-amber-400 bg-amber-50' : ''
+      }`}
+    >
+      <p className="text-2xl font-bold tabular-nums">{value}</p>
+      <p className="mt-1 text-sm text-muted">{label}</p>
+    </Link>
   )
 }
 
@@ -59,6 +85,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     limit: 100,
     sort: 'sortOrder',
   })
+
+  const { docs: keyCopies } = await payload.find({
+    collection: 'key-copies',
+    depth: 0,
+    limit: 1000,
+  })
+  const keys = keyStats(keyCopies as KeyCopy[])
 
   const stats = {
     total: allVehicles.length,
@@ -110,6 +143,57 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
         <Kpi label={STATUS_LABELS.in_use} value={stats.in_use} />
         <Kpi label={STATUS_LABELS.maintenance} value={stats.maintenance} />
       </div>
+
+      {/* Keys */}
+      <section className="mt-8 border border-line bg-paper p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+              Schlüsselverwaltung
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Zimmer, Material, Anlage und Sicherheit — {keys.total}{' '}
+              {keys.total === 1 ? 'Exemplar' : 'Exemplare'} erfasst.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href="/schluessel/ausgabe"
+              className="bg-army-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-army-red-dark"
+            >
+              Ausgabe
+            </Link>
+            <Link
+              href="/schluessel/ruecknahme"
+              className="border border-ink bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-black"
+            >
+              Rücknahme
+            </Link>
+            <Link
+              href="/schluessel"
+              className="border border-line px-4 py-2 text-sm font-semibold transition hover:border-army-red"
+            >
+              Schlüsselbrett →
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <KeyKpi label="Am Brett" value={keys.onBoard} href="/schluessel?status=am_brett" />
+          <KeyKpi label="Ausgegeben" value={keys.out} href="/schluessel?status=out" />
+          <KeyKpi
+            label="Überfällig"
+            value={keys.overdue}
+            href="/schluessel?status=overdue"
+            warn
+          />
+          <KeyKpi
+            label="Gesperrt / Verloren"
+            value={keys.blocked}
+            href="/schluessel?status=blocked"
+          />
+        </div>
+      </section>
 
       {/* Filters */}
       <div className="mt-8 space-y-3">

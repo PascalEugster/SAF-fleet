@@ -11,6 +11,12 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Vehicles } from './collections/Vehicles'
 import { Categories } from './collections/Categories'
+import { LockingSystems } from './collections/LockingSystems'
+import { KeyCategories } from './collections/KeyCategories'
+import { Keys } from './collections/Keys'
+import { KeyCopies } from './collections/KeyCopies'
+import { KeyBundles } from './collections/KeyBundles'
+import { KeyEvents } from './collections/KeyEvents'
 import { Branding } from './globals/Branding'
 import { resetEndpoint } from './endpoints/reset'
 
@@ -24,14 +30,25 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     meta: {
-      title: 'Fahrzeugverwaltung',
+      title: 'Fahrzeug- und Schlüsselverwaltung',
       titleSuffix: '— Schweizer Armee',
     },
     components: {
       afterDashboard: ['/components/admin/ResetTool#ResetTool'],
     },
   },
-  collections: [Vehicles, Categories, Users, Media],
+  collections: [
+    Vehicles,
+    Categories,
+    Keys,
+    KeyCopies,
+    KeyBundles,
+    KeyCategories,
+    LockingSystems,
+    KeyEvents,
+    Users,
+    Media,
+  ],
   globals: [Branding],
   endpoints: [resetEndpoint],
   editor: lexicalEditor(),

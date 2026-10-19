@@ -13,10 +13,13 @@ export function UserCombobox({
   users,
   name = 'userId',
   placeholder = 'Person suchen…',
+  onSelect,
 }: {
   users: UserOption[]
   name?: string
   placeholder?: string
+  /** Notified when the selection changes, for callers that react to the person. */
+  onSelect?: (user: UserOption | null) => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -44,6 +47,7 @@ export function UserCombobox({
     setSelected(u)
     setQuery('')
     setOpen(false)
+    onSelect?.(u)
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {

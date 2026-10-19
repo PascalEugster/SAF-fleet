@@ -5,6 +5,7 @@ import type { Branding } from '@/lib/branding'
 
 const NAV = [
   { href: '/', label: 'Dashboard' },
+  { href: '/schluessel', label: 'Schlüsselbrett' },
   { href: '/fahrzeuge/neu', label: 'Fahrzeug erfassen' },
   { href: '/personen', label: 'Personen' },
 ]
