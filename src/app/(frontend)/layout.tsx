@@ -17,9 +17,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="de">
       <body className="min-h-screen flex flex-col">
-        <Header branding={branding} />
+        <div className="print:hidden">
+          <Header branding={branding} />
+        </div>
         <main className="flex-1">{children}</main>
-        <footer className="mt-16 border-t border-line bg-paper">
+        <footer className="mt-16 border-t border-line bg-paper print:hidden">
           <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-muted">
             {branding.footerTitle && (
               <p className="font-semibold text-ink">{branding.footerTitle}</p>

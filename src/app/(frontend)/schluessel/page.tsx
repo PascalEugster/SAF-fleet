@@ -202,6 +202,23 @@ export default async function KeyBoardPage({ searchParams }: { searchParams: Sea
         </div>
       </div>
 
+      <div className="mt-4 flex flex-wrap gap-2">
+        {[
+          { href: '/schluessel/abschluss', label: 'Tagesabschluss' },
+          { href: '/schluessel/inventur', label: 'Inventur' },
+          { href: '/schluessel/vorfaelle', label: 'Vorfälle' },
+          { href: '/schluessel/etiketten', label: 'Etiketten drucken' },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="border border-line bg-paper px-3 py-1.5 text-sm transition hover:border-army-red"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi label="Exemplare gesamt" value={stats.total} href="/schluessel" accent />
         <Kpi label="Am Brett" value={stats.onBoard} href={buildHref({ status: 'am_brett' })} />

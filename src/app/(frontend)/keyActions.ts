@@ -20,6 +20,9 @@ function revalidateKeys(...paths: string[]) {
   revalidatePath('/schluessel')
   revalidatePath('/schluessel/ausgabe')
   revalidatePath('/schluessel/ruecknahme')
+  revalidatePath('/schluessel/abschluss')
+  revalidatePath('/schluessel/inventur')
+  revalidatePath('/schluessel/vorfaelle')
   revalidatePath('/')
   paths.forEach((p) => revalidatePath(p))
 }
@@ -74,6 +77,26 @@ export async function issueKeys(
   }
 
   const p = await payload()
+
+  // Deposit tags: the board only stays in sync if the tag changes hands too.
+  const tagsConfirmed = String(formData.get('tagsConfirmed') || '') === 'on'
+  const tags: string[] = []
+  for (const id of copyIds) {
+    const doc = await p.findByID({ collection: 'key-copies', id, depth: 0 }).catch(() => null)
+    if (doc?.tagNumber) tags.push(`${doc.label}: Marke ${doc.tagNumber}`)
+  }
+  for (const id of bundleIds) {
+    const doc = await p.findByID({ collection: 'key-bundles', id, depth: 0 }).catch(() => null)
+    if (doc?.tagNumber) tags.push(`${doc.label}: Marke ${doc.tagNumber}`)
+  }
+  if (tags.length > 0 && !tagsConfirmed) {
+    return {
+      ok: false,
+      error: 'Bitte die Aushändigung der Marke bestätigen.',
+      failures: tags,
+    }
+  }
+
   const dueAt = resolveDueAt(dueMode, dueCustom)
   const data = {
     currentHolder: Number(userId),
@@ -110,9 +133,9 @@ export async function issueKeys(
   }
   return {
     ok: true,
-    message: `${issued} ${issued === 1 ? 'Schlüssel' : 'Schlüssel'} ausgegeben${
-      dueAt ? '' : ' (Dauerausgabe)'
-    }.`,
+    message:
+      `${issued === 1 ? 'Ein Schlüssel' : `${issued} Schlüssel`} ausgegeben${dueAt ? '' : ' (Dauerausgabe)'}.` +
+      (tags.length > 0 ? ` Marken ausgehändigt: ${tags.length}.` : ''),
     ...(failures.length > 0 ? { failures } : {}),
   }
 }
@@ -160,7 +183,12 @@ export async function returnByNumber(
     const bundle = bundles.docs[0]
     await p.update({ collection: 'key-bundles', id: bundle.id, data: { currentHolder: null } })
     revalidateKeys(`/schluessel/bund/${bundle.id}`)
-    return { ok: true, message: `${bundle.label} zurückgenommen.` }
+    return {
+      ok: true,
+      message:
+        `${bundle.label} zurückgenommen.` +
+        (bundle.tagNumber ? ` Marke ${bundle.tagNumber} wieder ans Brett.` : ''),
+    }
   }
 
   const copies = await p.find({
@@ -202,7 +230,12 @@ export async function returnByNumber(
 
   await p.update({ collection: 'key-copies', id: copy.id, data: { currentHolder: null } })
   revalidateKeys(`/schluessel/${copy.id}`)
-  return { ok: true, message: `${copy.label} zurückgenommen.` }
+  return {
+    ok: true,
+    message:
+      `${copy.label} zurückgenommen.` +
+      (copy.tagNumber ? ` Marke ${copy.tagNumber} wieder ans Brett.` : ''),
+  }
 }
 
 const STATUS_EVENT: Record<string, KeyEventType> = {
@@ -264,7 +297,7 @@ export async function breakSeal(
       collection: 'key-copies',
       id,
       data: { seal: { sealed: false, sealNumber: before.seal?.sealNumber ?? null } },
-      context: { skipKeyEvents: true },
+      context: { skipKeyEvents: true, sealReason: reason },
     })
     await logKeyEvent(p, {
       type: 'siegel_gebrochen',
@@ -279,4 +312,249 @@ export async function breakSeal(
 
   revalidateKeys(`/schluessel/${id}`)
   return { ok: true, message: 'Siegel gebrochen. Der Schlüssel ist jetzt ausgebbar.' }
+}
+
+/** Report a loss, theft, defect or missing return. Blocks the copy via the incident hook. */
+export async function reportIncident(
+  _prev: KeyActionState,
+  formData: FormData,
+): Promise<KeyActionState> {
+  const copyId = String(formData.get('copyId') || '')
+  const type = String(formData.get('type') || '')
+  const description = String(formData.get('description') || '').trim()
+
+  if (!copyId) return { ok: false, error: 'Kein Exemplar angegeben.' }
+  if (!type) return { ok: false, error: 'Bitte die Art des Vorfalls wählen.' }
+
+  const p = await payload()
+  let created
+  try {
+    created = await p.create({
+      collection: 'key-incidents',
+      data: { copy: Number(copyId), type, description: description || null } as never,
+    })
+  } catch (err) {
+    return { ok: false, error: messageOf(err) }
+  }
+
+  revalidateKeys(`/schluessel/${copyId}`)
+  return {
+    ok: true,
+    message: 'Vorfall erfasst, Exemplar gesperrt.',
+    failures: created.impact ? [created.impact] : undefined,
+  }
+}
+
+/** Close an incident: either the key turned up, or the rekeying was done. */
+export async function closeIncident(
+  _prev: KeyActionState,
+  formData: FormData,
+): Promise<KeyActionState> {
+  const incidentId = String(formData.get('incidentId') || '')
+  const measure = String(formData.get('measure') || 'offen')
+  const costNote = String(formData.get('costNote') || '').trim()
+
+  if (!incidentId) return { ok: false, error: 'Kein Vorfall angegeben.' }
+
+  const p = await payload()
+  try {
+    const doc = await p.update({
+      collection: 'key-incidents',
+      id: incidentId,
+      data: { status: 'erledigt', measure, ...(costNote ? { costNote } : {}) } as never,
+    })
+    revalidateKeys(`/schluessel/${String((doc as { copy: number | { id: number } }).copy)}`)
+  } catch (err) {
+    return { ok: false, error: messageOf(err) }
+  }
+
+  return {
+    ok: true,
+    message:
+      measure === 'keine'
+        ? 'Vorfall erledigt, Exemplar wieder am Brett.'
+        : 'Vorfall erledigt, Exemplar als verloren verbucht.',
+  }
+}
+
+/** Release a blocked copy — closing an open incident if there is one. */
+export async function releaseBlockedCopy(
+  _prev: KeyActionState,
+  formData: FormData,
+): Promise<KeyActionState> {
+  const copyId = String(formData.get('copyId') || '')
+  if (!copyId) return { ok: false, error: 'Kein Exemplar angegeben.' }
+
+  const p = await payload()
+  try {
+    const open = await p.find({
+      collection: 'key-incidents',
+      where: { and: [{ copy: { equals: copyId } }, { status: { not_equals: 'erledigt' } }] },
+      limit: 1,
+      depth: 0,
+    })
+    if (open.totalDocs > 0) {
+      await p.update({
+        collection: 'key-incidents',
+        id: open.docs[0].id,
+        data: { status: 'erledigt', measure: 'keine' } as never,
+      })
+    } else {
+      const doc = await p.update({
+        collection: 'key-copies',
+        id: copyId,
+        data: { status: 'am_brett' as never },
+        context: { skipKeyEvents: true },
+      })
+      await logKeyEvent(p, { type: 'freigabe', copy: doc.id, keyLabel: doc.label })
+    }
+  } catch (err) {
+    return { ok: false, error: messageOf(err) }
+  }
+
+  revalidateKeys(`/schluessel/${copyId}`)
+  return { ok: true, message: 'Exemplar wieder freigegeben.' }
+}
+
+/** Take back everything one person holds — the service-exit check. */
+export async function returnAllForUser(formData: FormData): Promise<void> {
+  const userId = String(formData.get('userId') || '')
+  if (!userId) return
+
+  const p = await payload()
+
+  const bundles = await p.find({
+    collection: 'key-bundles',
+    where: { currentHolder: { equals: userId } },
+    limit: 100,
+    depth: 0,
+  })
+  for (const bundle of bundles.docs) {
+    await p.update({ collection: 'key-bundles', id: bundle.id, data: { currentHolder: null } })
+  }
+
+  const copies = await p.find({
+    collection: 'key-copies',
+    where: { currentHolder: { equals: userId } },
+    limit: 500,
+    depth: 0,
+  })
+  for (const copy of copies.docs) {
+    await p.update({ collection: 'key-copies', id: copy.id, data: { currentHolder: null } })
+  }
+
+  revalidateKeys(`/personen/${userId}`)
+  revalidatePath('/personen')
+}
+
+/** Sign off the shift: count what is still out and put it on record. */
+export async function confirmHandover(
+  _prev: KeyActionState,
+  formData: FormData,
+): Promise<KeyActionState> {
+  const toUserId = String(formData.get('toUserId') || '')
+  const note = String(formData.get('note') || '').trim()
+
+  const p = await payload()
+
+  const [copies, bundles] = await Promise.all([
+    p.find({
+      collection: 'key-copies',
+      where: { currentHolder: { exists: true } },
+      limit: 1000,
+      depth: 1,
+    }),
+    p.find({
+      collection: 'key-bundles',
+      where: { currentHolder: { exists: true } },
+      limit: 200,
+      depth: 1,
+    }),
+  ])
+
+  const now = Date.now()
+  const overdue = copies.docs.filter(
+    (c) => c.status === 'ausgegeben' && c.dueAt && new Date(c.dueAt).getTime() < now,
+  )
+
+  await logKeyEvent(
+    p,
+    {
+      type: 'uebergabe',
+      keyLabel: 'Tagesabschluss / Wachübergabe',
+      person: toUserId ? Number(toUserId) : null,
+      reason: note || null,
+      meta: {
+        out: copies.totalDocs,
+        bundles: bundles.totalDocs,
+        overdue: overdue.length,
+        items: copies.docs.map((c) => c.label),
+      },
+    },
+    undefined,
+  )
+
+  revalidateKeys()
+  return {
+    ok: true,
+    message: `Übergabe quittiert: ${copies.totalDocs} Exemplare draussen, davon ${overdue.length} überfällig.`,
+  }
+}
+
+/** Record a counted pass over the board. Only deviations are submitted. */
+export async function saveInventory(
+  _prev: KeyActionState,
+  formData: FormData,
+): Promise<KeyActionState> {
+  const missingIds = formData.getAll('missing').map(String).filter(Boolean)
+  const expected = Number(formData.get('expectedCount') || 0)
+  const note = String(formData.get('note') || '').trim()
+  const performedBy = String(formData.get('performedBy') || '')
+  const scope = formData.getAll('scope').map(String).filter(Boolean)
+
+  if (!expected) return { ok: false, error: 'Es wurde kein Bestand geprüft.' }
+
+  const p = await payload()
+
+  const differences = []
+  for (const id of missingIds) {
+    const copy = await p.findByID({ collection: 'key-copies', id, depth: 0 }).catch(() => null)
+    if (!copy) continue
+    differences.push({
+      copy: Number(id),
+      copyLabel: copy.label,
+      expectedStatus: copy.currentHolder ? 'Bei Inhaber' : 'Am Brett',
+      foundStatus: 'fehlt',
+    })
+  }
+
+  try {
+    await p.create({
+      collection: 'key-inventories',
+      data: {
+        date: new Date().toISOString(),
+        ...(performedBy ? { performedBy: Number(performedBy) } : {}),
+        ...(scope.length > 0 ? { scope: scope.map(Number) } : {}),
+        expectedCount: expected,
+        foundCount: expected - differences.length,
+        differences,
+        status: 'abgeschlossen',
+        ...(note ? { notes: note } : {}),
+      } as never,
+    })
+  } catch (err) {
+    return { ok: false, error: messageOf(err) }
+  }
+
+  revalidateKeys()
+  return {
+    ok: true,
+    message:
+      differences.length === 0
+        ? `Inventur abgeschlossen: ${expected} von ${expected} angetroffen, keine Differenzen.`
+        : `Inventur abgeschlossen: ${expected - differences.length} von ${expected} angetroffen, ${differences.length} ${
+            differences.length === 1 ? 'Differenz' : 'Differenzen'
+          }.`,
+    failures: differences.map((d) => `${d.copyLabel} — fehlt (erwartet: ${d.expectedStatus})`),
+  }
 }

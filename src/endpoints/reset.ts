@@ -80,6 +80,8 @@ export const resetEndpoint: Endpoint = {
         // Journal first, then the things it points at, then the stammdaten.
         for (const collection of [
           'key-events',
+          'key-incidents',
+          'key-inventories',
           'key-bundles',
           'key-copies',
           'keys',

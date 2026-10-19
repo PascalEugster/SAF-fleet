@@ -17,6 +17,8 @@ import { Keys } from './collections/Keys'
 import { KeyCopies } from './collections/KeyCopies'
 import { KeyBundles } from './collections/KeyBundles'
 import { KeyEvents } from './collections/KeyEvents'
+import { KeyIncidents } from './collections/KeyIncidents'
+import { KeyInventories } from './collections/KeyInventories'
 import { Branding } from './globals/Branding'
 import { resetEndpoint } from './endpoints/reset'
 
@@ -43,6 +45,8 @@ export default buildConfig({
     Keys,
     KeyCopies,
     KeyBundles,
+    KeyIncidents,
+    KeyInventories,
     KeyCategories,
     LockingSystems,
     KeyEvents,

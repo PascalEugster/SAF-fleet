@@ -10,6 +10,7 @@ const PEOPLE = [
     unit: 'Pz Bat 12',
     email: 'hans.muster@vtg.admin.ch',
     serviceFunction: 'Wachtmeister Wache',
+    serviceEndInDays: 21,
     pspLevel: 'psp',
     pspValidUntil: '2028-12-31',
   },
@@ -29,6 +30,7 @@ const PEOPLE = [
     unit: 'Geb Inf Bat 30',
     email: 'marco.rossi@vtg.admin.ch',
     pspLevel: 'keine',
+    serviceEndInDays: 14,
   },
   {
     name: 'Sophie Favre',
@@ -135,9 +137,22 @@ export async function seedDatabase(payload: Payload, { req }: SeedOpts = {}) {
     unit: 'LBA',
   })
 
+  // Service end is relative so the demo keeps making sense months from now.
+  const inDays = (days: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    d.setHours(18, 0, 0, 0)
+    return d.toISOString()
+  }
+
   const userIds: Record<string, number | string> = {}
   for (const p of PEOPLE) {
-    const u = await ensureUser({ ...p, password: 'armee2026' })
+    const { serviceEndInDays, ...rest } = p as typeof p & { serviceEndInDays?: number }
+    const u = await ensureUser({
+      ...rest,
+      password: 'armee2026',
+      ...(serviceEndInDays ? { serviceEnd: inDays(serviceEndInDays) } : {}),
+    })
     userIds[p.email] = u.id
   }
 

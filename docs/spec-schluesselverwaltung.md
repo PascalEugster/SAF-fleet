@@ -1,6 +1,6 @@
 # Spec: Schlüsselverwaltung
 
-> Status: **Phase 1 umgesetzt** · 19.10.2026 · Teil der bestehenden Applikation (Payload 3 + Next.js), keine separate App.
+> Status: **Phase 1 und 2 umgesetzt** · 19.10.2026 · Teil der bestehenden Applikation (Payload 3 + Next.js), keine separate App.
 
 Die Applikation verwaltet heute Fahrzeuge: Objekt → Person → Historie. Schlüssel folgen demselben Muster, brechen aber an drei Punkten mit dem Fahrzeugmodell (→ Kap. 3). Diese Spec beschreibt das Datenmodell, die Regeln und die Bedienung für alle übrigen Schlüssel einer Einheit — Zimmer, Materiallager, Waffenlokal, Anlage, Büro, Badge.
 
@@ -338,8 +338,9 @@ Optionales Feld `tagNumber`. Ist es gesetzt, verlangt die Ausgabe die Marke und 
 Collections 4.1–4.7 und 4.10, Hooks 1–5 und 10, Schlüsselbrett, Ausgabe, Rücknahme, Exemplar-Detail, Dashboard-Kacheln, Seed-Daten (ca. 40 Schliessungen über alle sechs Kategorien, inkl. zwei Bünde und ein versiegelter Notschlüssel).
 → Das ist der demofähige Stand. Zusätzlich gebaut: Bund-Detailseite (nötig für die Rücknahme eines Bundes) und ein `keys`-Ziel im Reset-Tool.
 
-**Phase 2 — Betrieb (ca. 2 Arbeitstage)**
+**Phase 2 — Betrieb · umgesetzt am 19.10.2026**
 Tagesabschluss/Wachübergabe, Inventur, Vorfälle inkl. Impact (4.8, 4.9, Hooks 6–9), Personenblatt mit «Alle zurücknehmen», QR-Etiketten, Markenabgleich.
+→ Zusätzlich gebaut: Vorfall-Übersicht unter `/schluessel/vorfaelle`. Der Siegelbruch verlangt neu auch auf Hook-Ebene eine Begründung, und die Rückgabefrist wird hart auf das Dienstende gekürzt.
 
 **Phase 3 — Nachweis (ca. 2–3 Arbeitstage)**
 Quittung als PDF mit Unterschriftszeile, Journal-Export (CSV) für Audit, `locations`-Collection mit Türenliste je Schliessung, Offline-Synchronisation gemeinsam mit der bestehenden Tablet-Arbeit.

@@ -117,8 +117,36 @@ export function personLabel(user: User | null): string {
   return user.rank ? `${user.name} (${user.rank})` : user.name
 }
 
+/** True once the holder's last day of service has passed. */
+export function isServiceOver(user: Pick<User, 'serviceEnd'>): boolean {
+  if (!user.serviceEnd) return false
+  return new Date(user.serviceEnd).getTime() < Date.now()
+}
+
 export function hasValidPsp(user: Pick<User, 'pspLevel' | 'pspValidUntil'>): boolean {
   if (!user.pspLevel || user.pspLevel === 'keine') return false
   if (!user.pspValidUntil) return true
   return new Date(user.pspValidUntil).getTime() >= Date.now()
+}
+
+export const INCIDENT_TYPE_LABELS: Record<string, string> = {
+  verlust: 'Verlust',
+  diebstahl: 'Diebstahl',
+  defekt: 'Defekt',
+  nicht_zurueckgegeben: 'Nicht zurückgegeben',
+  siegelbruch_ungeklaert: 'Siegelbruch ungeklärt',
+}
+
+export const INCIDENT_MEASURE_LABELS: Record<string, string> = {
+  offen: 'Offen',
+  zylinder_tausch: 'Zylinder tauschen',
+  gruppe_umbau: 'Gruppe umbauen',
+  anlage_umbau: 'Schliessanlage umbauen',
+  keine: 'Keine Massnahme',
+}
+
+export const INCIDENT_STATUS_LABELS: Record<string, string> = {
+  offen: 'Offen',
+  in_bearbeitung: 'In Bearbeitung',
+  erledigt: 'Erledigt',
 }

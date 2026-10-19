@@ -314,6 +314,22 @@ export const KeyCopies: CollectionConfig = {
         const sealed = Boolean(('seal' in data ? data.seal?.sealed : originalDoc?.seal?.sealed) ?? false)
         const sealNumber = ('seal' in data ? data.seal?.sealNumber : originalDoc?.seal?.sealNumber) ?? null
 
+        const prevSealed = Boolean(originalDoc?.seal?.sealed)
+        if (prevSealed && !sealed) {
+          // Payload hands the hook the merged document, so an unchanged note is
+          // not a justification — only a fresh one counts.
+          const note = typeof data.notes === 'string' ? data.notes.trim() : ''
+          const noteIsNew = note.length > 0 && note !== String(originalDoc?.notes ?? '').trim()
+          const reason =
+            (req.context?.sealReason as string | undefined)?.trim() || (noteIsNew ? note : '')
+          if (!reason) {
+            throw new APIError(
+              `Siegelbruch an ${data.label} erfordert eine Begründung. Bitte über «Siegel brechen» erfassen oder eine Bemerkung hinterlegen.`,
+              400,
+            )
+          }
+        }
+
         const prevHolder = idOf(originalDoc?.currentHolder)
         const hasHolderField = 'currentHolder' in data
         const newHolder = idOf(data.currentHolder)
@@ -358,7 +374,26 @@ export const KeyCopies: CollectionConfig = {
             depth: 0,
             req,
           })
-          const person = holder as { name?: string; pspLevel?: string; pspValidUntil?: string | null }
+          const person = holder as {
+            name?: string
+            pspLevel?: string
+            pspValidUntil?: string | null
+            serviceEnd?: string | null
+          }
+
+          if (person.serviceEnd) {
+            const end = new Date(person.serviceEnd)
+            end.setHours(18, 0, 0, 0)
+            if (end.getTime() < Date.now()) {
+              throw new APIError(
+                `Der Dienst von ${person.name ?? 'dieser Person'} endete am ${formatDate(person.serviceEnd)}. Es kann kein Schlüssel mehr ausgegeben werden.`,
+                400,
+              )
+            }
+            const due = data.dueAt ? new Date(String(data.dueAt)) : null
+            // Shorten the term to the last day of service, including permanent issues.
+            if (!due || due.getTime() > end.getTime()) data.dueAt = end.toISOString()
+          }
 
           // Zone 2/3 keys need a valid personnel security screening (PSPV).
           if ((key as { requiresPsp?: boolean }).requiresPsp) {

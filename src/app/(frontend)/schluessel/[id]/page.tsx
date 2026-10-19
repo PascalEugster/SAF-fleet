@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import React from 'react'
-import type { KeyBundle, KeyCopy, KeyEvent } from '@/payload-types'
+import type { KeyBundle, KeyCopy, KeyEvent, KeyIncident } from '@/payload-types'
 import { KeyStatusBadge } from '@/components/KeyStatusBadge'
 import { KeyAssignPanel } from '@/components/KeyAssignPanel'
 import { formatDateTime } from '@/lib/labels'
 import {
+  INCIDENT_MEASURE_LABELS,
+  INCIDENT_STATUS_LABELS,
+  INCIDENT_TYPE_LABELS,
   HIERARCHY_LABELS,
   KEY_EVENT_LABELS,
   MEDIUM_LABELS,
@@ -48,6 +51,14 @@ export default async function KeyCopyDetailPage({
     notFound()
   }
 
+  const { docs: incidents } = await payload.find({
+    collection: 'key-incidents',
+    where: { copy: { equals: id } },
+    sort: '-reportedAt',
+    limit: 20,
+    depth: 0,
+  })
+
   const { docs: events } = await payload.find({
     collection: 'key-events',
     where: { copy: { equals: id } },
@@ -66,6 +77,7 @@ export default async function KeyCopyDetailPage({
   const bundle =
     copy!.bundle && typeof copy!.bundle === 'object' ? (copy!.bundle as KeyBundle) : null
   const overdue = isOverdue(copy!)
+  const openIncident = (incidents as KeyIncident[]).find((i) => i.status !== 'erledigt') ?? null
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -153,6 +165,45 @@ export default async function KeyCopyDetailPage({
             </section>
           )}
 
+          {incidents.length > 0 && (
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Vorfälle</h2>
+              <ul className="mt-3 border border-line bg-paper">
+                {(incidents as KeyIncident[]).map((incident) => (
+                  <li key={incident.id} className="border-b border-line p-4 last:border-b-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">
+                        {INCIDENT_TYPE_LABELS[incident.type] ?? incident.type}
+                      </span>
+                      <span
+                        className={`border px-1.5 py-0.5 text-[11px] font-semibold uppercase ${
+                          incident.status === 'erledigt'
+                            ? 'border-line bg-mist text-muted'
+                            : 'border-army-red bg-army-red text-white'
+                        }`}
+                      >
+                        {INCIDENT_STATUS_LABELS[incident.status] ?? incident.status}
+                      </span>
+                      <span className="text-sm text-muted">
+                        {formatDateTime(incident.reportedAt)}
+                      </span>
+                    </div>
+                    {incident.description && <p className="mt-1 text-sm">{incident.description}</p>}
+                    {incident.impact && (
+                      <p className="mt-2 border-l-2 border-line pl-3 text-sm text-muted">
+                        {incident.impact}
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-muted">
+                      Massnahme: {INCIDENT_MEASURE_LABELS[incident.measure] ?? incident.measure}
+                      {incident.costNote ? ` · ${incident.costNote}` : ''}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Journal</h2>
             {events.length === 0 ? (
@@ -193,12 +244,22 @@ export default async function KeyCopyDetailPage({
             status={copy!.status}
             holderName={holder?.name ?? null}
             sealNumber={copy!.seal?.sealNumber ?? null}
+            tagNumber={copy!.tagNumber ?? null}
             bundle={bundle ? { id: String(bundle.id), label: bundle.label } : null}
             requiresPsp={Boolean(key?.requiresPsp)}
             requiresFourEyes={Boolean(key?.requiresFourEyes)}
             zone={key?.protectionZone ?? 'keine'}
             users={users}
             pspValidById={pspValidById}
+            openIncident={
+              openIncident
+                ? {
+                    id: String(openIncident.id),
+                    impact: openIncident.impact ?? null,
+                    measure: openIncident.measure,
+                  }
+                : null
+            }
           />
         </div>
       </div>

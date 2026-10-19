@@ -348,15 +348,25 @@ export async function seedKeys(payload: Payload, { req, userIds }: SeedOpts) {
     }
   }
 
-  // One lost badge, blocked for issue.
+  // One open loss case, so the incident list and the impact estimate have content.
   const lost = copyIds['BA-100#3']
   if (lost) {
     const doc = await payload.findByID({ collection: 'key-copies', id: lost, depth: 0, req })
-    if (doc.status === 'am_brett' && !doc.currentHolder) {
-      await payload.update({
-        collection: 'key-copies',
-        id: lost,
-        data: { status: 'verloren', notes: 'Beim Austritt nicht zurückgegeben.' },
+    const existing = await payload.find({
+      collection: 'key-incidents',
+      where: { copy: { equals: lost } },
+      limit: 1,
+      depth: 0,
+      req,
+    })
+    if (doc.status === 'am_brett' && !doc.currentHolder && existing.totalDocs === 0) {
+      await payload.create({
+        collection: 'key-incidents',
+        data: {
+          copy: lost,
+          type: 'verlust',
+          description: 'Zutrittsbadge beim Austritt nicht zurückgegeben.',
+        } as never,
         req,
       })
     }

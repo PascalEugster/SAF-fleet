@@ -72,6 +72,8 @@ export interface Config {
     keys: Key;
     'key-copies': KeyCopy;
     'key-bundles': KeyBundle;
+    'key-incidents': KeyIncident;
+    'key-inventories': KeyInventory;
     'key-categories': KeyCategory;
     'locking-systems': LockingSystem;
     'key-events': KeyEvent;
@@ -89,6 +91,8 @@ export interface Config {
     keys: KeysSelect<false> | KeysSelect<true>;
     'key-copies': KeyCopiesSelect<false> | KeyCopiesSelect<true>;
     'key-bundles': KeyBundlesSelect<false> | KeyBundlesSelect<true>;
+    'key-incidents': KeyIncidentsSelect<false> | KeyIncidentsSelect<true>;
+    'key-inventories': KeyInventoriesSelect<false> | KeyInventoriesSelect<true>;
     'key-categories': KeyCategoriesSelect<false> | KeyCategoriesSelect<true>;
     'locking-systems': LockingSystemsSelect<false> | LockingSystemsSelect<true>;
     'key-events': KeyEventsSelect<false> | KeyEventsSelect<true>;
@@ -414,6 +418,68 @@ export interface KeyBundle {
   createdAt: string;
 }
 /**
+ * Loss, theft, defect. The copy is blocked automatically and the impact derived from the hierarchy level.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-incidents".
+ */
+export interface KeyIncident {
+  id: number;
+  title?: string | null;
+  copy: number | KeyCopy;
+  type: 'verlust' | 'diebstahl' | 'defekt' | 'nicht_zurueckgegeben' | 'siegelbruch_ungeklaert';
+  reportedAt?: string | null;
+  reportedBy?: (number | null) | User;
+  /**
+   * Holder at the time of the report.
+   */
+  heldBy?: (number | null) | User;
+  description?: string | null;
+  /**
+   * Derived from hierarchy level and locking system.
+   */
+  impact?: string | null;
+  measure: 'offen' | 'zylinder_tausch' | 'gruppe_umbau' | 'anlage_umbau' | 'keine';
+  status: 'offen' | 'in_bearbeitung' | 'erledigt';
+  costNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-inventories".
+ */
+export interface KeyInventory {
+  id: number;
+  title?: string | null;
+  date: string;
+  performedBy?: (number | null) | User;
+  signedOffBy?: (number | null) | User;
+  /**
+   * Empty = the whole inventory.
+   */
+  scope?: (number | KeyCategory)[] | null;
+  expectedCount?: number | null;
+  foundCount?: number | null;
+  status: 'laufend' | 'abgeschlossen';
+  /**
+   * Deviations only. Anything not listed was found where expected.
+   */
+  differences?:
+    | {
+        copy?: (number | null) | KeyCopy;
+        copyLabel?: string | null;
+        expectedStatus?: string | null;
+        foundStatus?: ('fehlt' | 'falscher_ort' | 'beschaedigt') | null;
+        note?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Complete log. Entries cannot be edited after the fact.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -498,6 +564,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'key-bundles';
         value: number | KeyBundle;
+      } | null)
+    | ({
+        relationTo: 'key-incidents';
+        value: number | KeyIncident;
+      } | null)
+    | ({
+        relationTo: 'key-inventories';
+        value: number | KeyInventory;
       } | null)
     | ({
         relationTo: 'key-categories';
@@ -663,6 +737,52 @@ export interface KeyBundlesSelect<T extends boolean = true> {
   assignedAt?: T;
   issuedBy?: T;
   secondSignature?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-incidents_select".
+ */
+export interface KeyIncidentsSelect<T extends boolean = true> {
+  title?: T;
+  copy?: T;
+  type?: T;
+  reportedAt?: T;
+  reportedBy?: T;
+  heldBy?: T;
+  description?: T;
+  impact?: T;
+  measure?: T;
+  status?: T;
+  costNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-inventories_select".
+ */
+export interface KeyInventoriesSelect<T extends boolean = true> {
+  title?: T;
+  date?: T;
+  performedBy?: T;
+  signedOffBy?: T;
+  scope?: T;
+  expectedCount?: T;
+  foundCount?: T;
+  status?: T;
+  differences?:
+    | T
+    | {
+        copy?: T;
+        copyLabel?: T;
+        expectedStatus?: T;
+        foundStatus?: T;
+        note?: T;
+        id?: T;
+      };
   notes?: T;
   updatedAt?: T;
   createdAt?: T;
