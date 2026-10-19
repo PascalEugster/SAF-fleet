@@ -20,6 +20,93 @@ const LOCKING_SYSTEMS = [
   },
 ] as const
 
+const DEPOTS = [
+  {
+    name: 'Schlüsselbrett Wache',
+    type: 'brett',
+    lockType: 'offen',
+    securityLevel: 'keine',
+    location: 'Wachlokal, Gebäude 1',
+    capacity: 60,
+    custodian: 'hans.muster@vtg.admin.ch',
+    notes: 'Offenes Brett unter ständiger Aufsicht der Wache.',
+  },
+  {
+    name: 'Schlüsselschrank Zentrale',
+    type: 'schrank',
+    lockType: 'schluessel',
+    securityLevel: 's1',
+    location: 'Kommandoposten',
+    capacity: 40,
+    custodian: 'anna.buehler@vtg.admin.ch',
+  },
+  {
+    name: 'Schlüsseltresor Kdt',
+    type: 'tresor',
+    lockType: 'schluessel_und_code',
+    securityLevel: 'grad0',
+    location: 'Büro Kp Kdt',
+    capacity: 20,
+    custodian: 'sophie.favre@vtg.admin.ch',
+    codeChangedInDays: -200,
+    codeIntervalDays: 180,
+    notes: 'Doppelbartschloss mit zusätzlichem Zahlenschloss.',
+  },
+  {
+    name: 'Schlüsseltresor Munition',
+    type: 'tresor',
+    lockType: 'doppelverschluss',
+    securityLevel: 'grad1',
+    location: 'Gebäude 1, Raum 012',
+    capacity: 10,
+    custodian: 'sophie.favre@vtg.admin.ch',
+    notes: 'Zwei getrennte Schlösser — nur in Anwesenheit von zwei Personen zu öffnen.',
+  },
+  {
+    name: 'Ausgabeautomat Fahrzeughalle',
+    type: 'ausgabesystem',
+    lockType: 'badge',
+    securityLevel: 's2',
+    location: 'Gebäude 5, Eingang',
+    capacity: 30,
+    systemReference: 'Ausgabeautomat Nr. 2',
+    codeChangedInDays: -30,
+    codeIntervalDays: 365,
+    notes: 'Freigabe gegen Badge, Entnahme und Rückgabe werden vom System protokolliert.',
+  },
+  {
+    name: 'Objektdepot Haupttor',
+    type: 'objektdepot',
+    lockType: 'badge',
+    securityLevel: 's2',
+    location: 'Aussenwand Haupttor',
+    capacity: 4,
+    externalAccess: true,
+    tamperMonitored: true,
+    systemReference: 'Schlüsseldepot Klasse 3',
+    notes: 'Zugriff durch Feuerwehr im Ereignisfall. Sabotagekontakt auf die Alarmanlage.',
+  },
+  {
+    name: 'Siegelschrank Notschlüssel',
+    type: 'siegelschrank',
+    lockType: 'siegel',
+    securityLevel: 'grad0',
+    location: 'Büro Kp Kdt',
+    capacity: 10,
+    custodian: 'sophie.favre@vtg.admin.ch',
+    notes: 'Reserveschlüssel in versiegelten Kuverts. Siegelbruch ist zu begründen.',
+  },
+  {
+    name: 'Elektronische Berechtigungen',
+    type: 'elektronisch',
+    lockType: 'badge',
+    securityLevel: 'keine',
+    location: 'Kein physischer Ort',
+    systemReference: 'Zutrittssystem Kaserne Ost',
+    notes: 'Badges und Transponder. Bei Verlust wird die Berechtigung gesperrt, kein Zylindertausch.',
+  },
+] as const
+
 type KeySpec = {
   number: string
   label: string
@@ -118,6 +205,26 @@ const BUNDLES: {
   },
 ]
 
+/**
+ * Where a copy is kept. The depot must be at least as strong as the key it
+ * holds, so this mapping follows risk and protection zone, not convenience.
+ */
+function depotForCopy(spec: KeySpec, copyNumber: number): string {
+  if (spec.number === 'WL-1' && copyNumber === 2) return 'Siegelschrank Notschlüssel'
+  if (spec.number === 'TO-1' && copyNumber === 2) return 'Objektdepot Haupttor'
+  if (spec.medium && spec.medium !== 'mechanisch' && spec.medium !== 'vorhaengeschloss') {
+    return 'Elektronische Berechtigungen'
+  }
+  if (['MU-1', 'SM-1', 'WL-1'].includes(spec.number)) return 'Schlüsseltresor Munition'
+  if (['GA-1', 'TA-1'].includes(spec.number)) return 'Ausgabeautomat Fahrzeughalle'
+
+  const risk = spec.risk ?? KEY_CATEGORIES.find((c) => c.name === spec.category)!.defaultRisk
+  const zone = spec.zone ?? 'keine'
+  if (zone === 'zone2' || zone === 'zone3' || risk === 'hoch') return 'Schlüsseltresor Kdt'
+  if (risk === 'erhoeht') return 'Schlüsselschrank Zentrale'
+  return 'Schlüsselbrett Wache'
+}
+
 const at = (daysFromNow: number, hour: number, minute = 0): string => {
   const d = new Date()
   d.setDate(d.getDate() + daysFromNow)
@@ -132,7 +239,7 @@ const at = (daysFromNow: number, hour: number, minute = 0): string => {
  */
 export async function seedKeys(payload: Payload, { req, userIds }: SeedOpts) {
   const ensure = async <T extends Record<string, unknown>>(
-    collection: 'key-categories' | 'locking-systems' | 'keys' | 'key-bundles',
+    collection: 'key-categories' | 'locking-systems' | 'keys' | 'key-bundles' | 'key-depots',
     field: string,
     value: unknown,
     data: T,
@@ -158,6 +265,20 @@ export async function seedKeys(payload: Payload, { req, userIds }: SeedOpts) {
   for (const s of LOCKING_SYSTEMS) {
     const doc = await ensure('locking-systems', 'name', s.name, s)
     systemIds[s.name] = doc.id
+  }
+
+  const depotIds: Record<string, number | string> = {}
+  for (const d of DEPOTS) {
+    const { custodian, codeChangedInDays, ...rest } = d as (typeof DEPOTS)[number] & {
+      custodian?: string
+      codeChangedInDays?: number
+    }
+    const doc = await ensure('key-depots', 'name', d.name, {
+      ...rest,
+      ...(custodian ? { custodian: userIds[custodian] } : {}),
+      ...(codeChangedInDays !== undefined ? { codeChangedAt: at(codeChangedInDays, 9) } : {}),
+    })
+    depotIds[d.name] = doc.id
   }
 
   const keyIds: Record<string, number | string> = {}
@@ -205,6 +326,7 @@ export async function seedKeys(payload: Payload, { req, userIds }: SeedOpts) {
           key: keyIds[spec.number] as never,
           copyNumber: n,
           medium: spec.medium ?? 'mechanisch',
+          depot: depotIds[depotForCopy(spec, n)] as never,
           storageSlot: `${String.fromCharCode(65 + Math.floor((slot - 1) / 20))}-${String(
             ((slot - 1) % 20) + 1,
           ).padStart(2, '0')}`,
@@ -376,5 +498,6 @@ export async function seedKeys(payload: Payload, { req, userIds }: SeedOpts) {
     keys: Object.keys(keyIds).length,
     copies: Object.keys(copyIds).length,
     bundles: Object.keys(bundleIds).length,
+    depots: Object.keys(depotIds).length,
   }
 }

@@ -75,6 +75,7 @@ export interface Config {
     'key-incidents': KeyIncident;
     'key-inventories': KeyInventory;
     'key-categories': KeyCategory;
+    'key-depots': KeyDepot;
     'locking-systems': LockingSystem;
     'key-events': KeyEvent;
     users: User;
@@ -94,6 +95,7 @@ export interface Config {
     'key-incidents': KeyIncidentsSelect<false> | KeyIncidentsSelect<true>;
     'key-inventories': KeyInventoriesSelect<false> | KeyInventoriesSelect<true>;
     'key-categories': KeyCategoriesSelect<false> | KeyCategoriesSelect<true>;
+    'key-depots': KeyDepotsSelect<false> | KeyDepotsSelect<true>;
     'locking-systems': LockingSystemsSelect<false> | LockingSystemsSelect<true>;
     'key-events': KeyEventsSelect<false> | KeyEventsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -307,6 +309,10 @@ export interface Key {
    * Set automatically for high risk.
    */
   requiresFourEyes?: boolean | null;
+  /**
+   * Must not hang on a ring. Set automatically for high risk.
+   */
+  requiresSeparateStorage?: boolean | null;
   image?: (number | null) | Media;
   notes?: string | null;
   updatedAt: string;
@@ -362,8 +368,15 @@ export interface KeyCopy {
    * Driven by issue/return. Only blocked, lost and defective are set by hand.
    */
   status: 'am_brett' | 'ausgegeben' | 'dauerausgabe' | 'versiegelt' | 'gesperrt' | 'verloren' | 'defekt';
+  /**
+   * Hook or slot inside the depot.
+   */
   storageSlot?: string | null;
   tagNumber?: string | null;
+  /**
+   * Where the copy lives when it is not issued. The depot must match the key’s exposure.
+   */
+  depot?: (number | null) | KeyDepot;
   /**
    * Copies in a bundle are only issued through the bundle.
    */
@@ -388,6 +401,60 @@ export interface KeyCopy {
    * Required for four-eyes keys.
    */
   secondSignature?: (number | null) | User;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Where keys live and how well that place is secured.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-depots".
+ */
+export interface KeyDepot {
+  id: number;
+  name: string;
+  type:
+    | 'brett'
+    | 'schrank'
+    | 'tresor'
+    | 'ausgabesystem'
+    | 'objektdepot'
+    | 'siegelschrank'
+    | 'panzerschrank'
+    | 'mobil'
+    | 'elektronisch';
+  lockType:
+    | 'offen'
+    | 'schluessel'
+    | 'zahlenschloss'
+    | 'schluessel_und_code'
+    | 'doppelverschluss'
+    | 'badge'
+    | 'biometrie'
+    | 'siegel';
+  /**
+   * A key must never need more protection than the place it is kept in.
+   */
+  securityLevel: 'keine' | 's1' | 's2' | 'grad0' | 'grad1' | 'grad2';
+  location?: string | null;
+  custodian?: (number | null) | User;
+  /**
+   * Empty = unlimited.
+   */
+  capacity?: number | null;
+  systemReference?: string | null;
+  /**
+   * The cabinet releases keys against a badge and logs by itself.
+   */
+  selfService?: boolean | null;
+  /**
+   * e.g. fire brigade. Must be reported and monitored.
+   */
+  externalAccess?: boolean | null;
+  tamperMonitored?: boolean | null;
+  codeChangedAt?: string | null;
+  codeIntervalDays?: number | null;
   notes?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -439,7 +506,7 @@ export interface KeyIncident {
    * Derived from hierarchy level and locking system.
    */
   impact?: string | null;
-  measure: 'offen' | 'zylinder_tausch' | 'gruppe_umbau' | 'anlage_umbau' | 'keine';
+  measure: 'offen' | 'zylinder_tausch' | 'gruppe_umbau' | 'anlage_umbau' | 'berechtigung_sperren' | 'keine';
   status: 'offen' | 'in_bearbeitung' | 'erledigt';
   costNote?: string | null;
   updatedAt: string;
@@ -578,6 +645,10 @@ export interface PayloadLockedDocument {
         value: number | KeyCategory;
       } | null)
     | ({
+        relationTo: 'key-depots';
+        value: number | KeyDepot;
+      } | null)
+    | ({
         relationTo: 'locking-systems';
         value: number | LockingSystem;
       } | null)
@@ -688,6 +759,7 @@ export interface KeysSelect<T extends boolean = true> {
   protectionZone?: T;
   requiresPsp?: T;
   requiresFourEyes?: T;
+  requiresSeparateStorage?: T;
   image?: T;
   notes?: T;
   updatedAt?: T;
@@ -705,6 +777,7 @@ export interface KeyCopiesSelect<T extends boolean = true> {
   status?: T;
   storageSlot?: T;
   tagNumber?: T;
+  depot?: T;
   bundle?: T;
   seal?:
     | T
@@ -796,6 +869,28 @@ export interface KeyCategoriesSelect<T extends boolean = true> {
   icon?: T;
   sortOrder?: T;
   defaultRisk?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "key-depots_select".
+ */
+export interface KeyDepotsSelect<T extends boolean = true> {
+  name?: T;
+  type?: T;
+  lockType?: T;
+  securityLevel?: T;
+  location?: T;
+  custodian?: T;
+  capacity?: T;
+  systemReference?: T;
+  selfService?: T;
+  externalAccess?: T;
+  tamperMonitored?: T;
+  codeChangedAt?: T;
+  codeIntervalDays?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

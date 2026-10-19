@@ -9,7 +9,8 @@ async function seed() {
   const result = await seedDatabase(payload)
   payload.logger.info(
     `Seed abgeschlossen ✔ (${result.vehicles} Fahrzeuge, ${result.users} Personen, ` +
-      `${result.keys} Schliessungen / ${result.keyCopies} Exemplare, ${result.keyBundles} Bünde)`,
+      `${result.keys} Schliessungen / ${result.keyCopies} Exemplare, ${result.keyBundles} Bünde, ` +
+      `${result.keyDepots} Verwahrungen)`,
   )
   process.exit(0)
 }

@@ -8,7 +8,7 @@ const TARGETS = [
   { key: 'history', label: 'Nutzungshistorie & Zuweisungen', hint: 'Setzt alle Fahrzeuge auf «verfügbar» und leert die Historie.' },
   { key: 'media', label: 'Medien', hint: 'Löscht alle hochgeladenen Bilder (inkl. Logo).' },
   { key: 'categories', label: 'Kategorien', hint: 'Löscht alle Kategorien (und die zugehörigen Fahrzeuge).' },
-  { key: 'keys', label: 'Schlüssel', hint: 'Löscht Schliessungen, Exemplare, Bünde, Journal, Vorfälle, Inventuren und Schlüsselkategorien.' },
+  { key: 'keys', label: 'Schlüssel', hint: 'Löscht Schliessungen, Exemplare, Bünde, Journal, Vorfälle, Inventuren, Verwahrungen und Schlüsselkategorien.' },
 ] as const
 
 const CONFIRM_WORD = 'RESET'
@@ -71,6 +71,7 @@ export function ResetTool() {
         'key-incidents': 'Vorfälle',
         'key-inventories': 'Inventuren',
         'key-categories': 'Schlüsselkategorien',
+        'key-depots': 'Verwahrungen',
         'locking-systems': 'Schliessanlagen',
       }
       const parts: string[] = []

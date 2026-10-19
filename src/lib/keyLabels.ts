@@ -142,6 +142,7 @@ export const INCIDENT_MEASURE_LABELS: Record<string, string> = {
   zylinder_tausch: 'Zylinder tauschen',
   gruppe_umbau: 'Gruppe umbauen',
   anlage_umbau: 'Schliessanlage umbauen',
+  berechtigung_sperren: 'Berechtigung sperren',
   keine: 'Keine Massnahme',
 }
 
@@ -149,4 +150,59 @@ export const INCIDENT_STATUS_LABELS: Record<string, string> = {
   offen: 'Offen',
   in_bearbeitung: 'In Bearbeitung',
   erledigt: 'Erledigt',
+}
+
+export const DEPOT_TYPE_LABELS: Record<string, string> = {
+  brett: 'Schlüsselbrett',
+  schrank: 'Schlüsselschrank',
+  tresor: 'Schlüsseltresor',
+  ausgabesystem: 'Elektronisches Ausgabesystem',
+  objektdepot: 'Objektdepot',
+  siegelschrank: 'Siegelschrank',
+  panzerschrank: 'Panzerschrank',
+  mobil: 'Mobil (am Mann)',
+  elektronisch: 'Elektronische Berechtigung',
+}
+
+export const DEPOT_TYPE_ICONS: Record<string, string> = {
+  brett: '🪝',
+  schrank: '🗄️',
+  tresor: '🔐',
+  ausgabesystem: '🖥️',
+  objektdepot: '🚒',
+  siegelschrank: '✉️',
+  panzerschrank: '🛡️',
+  mobil: '🎒',
+  elektronisch: '💳',
+}
+
+export const DEPOT_LOCK_LABELS: Record<string, string> = {
+  offen: 'Offen',
+  schluessel: 'Schlüssel',
+  zahlenschloss: 'Zahlenschloss',
+  schluessel_und_code: 'Schlüssel und Code',
+  doppelverschluss: 'Doppelverschluss',
+  badge: 'Badge / Transponder',
+  biometrie: 'Biometrie',
+  siegel: 'Siegel',
+}
+
+export const SECURITY_LEVEL_LABELS: Record<string, string> = {
+  keine: 'Keine',
+  s1: 'EN 14450 S1',
+  s2: 'EN 14450 S2',
+  grad0: 'EN 1143-1 Grad 0',
+  grad1: 'EN 1143-1 Grad 1',
+  grad2: 'EN 1143-1 Grad 2+',
+}
+
+/** True once the stored code is older than the depot's own change interval. */
+export function codeChangeDue(depot: {
+  codeChangedAt?: string | null
+  codeIntervalDays?: number | null
+}): boolean {
+  if (!depot.codeIntervalDays) return false
+  if (!depot.codeChangedAt) return true
+  const due = new Date(depot.codeChangedAt).getTime() + depot.codeIntervalDays * 86400000
+  return due < Date.now()
 }

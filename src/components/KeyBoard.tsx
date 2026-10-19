@@ -8,6 +8,7 @@ export type BoardItem = {
   tile: KeyTileData
   kind: 'copy' | 'bundle'
   categoryId: string | null
+  depotId: string | null
   statusGroup: 'am_brett' | 'out' | 'versiegelt' | 'blocked'
   overdue: boolean
   /** Lowercased haystack: number, label, room, slot, tag and holder. */
@@ -15,6 +16,7 @@ export type BoardItem = {
 }
 
 export type BoardCategory = { id: string; name: string; icon?: string | null }
+export type BoardDepot = { id: string; name: string }
 
 const STATUS_SEGMENTS: { value: string; label: string; warn?: boolean }[] = [
   { value: 'all', label: 'Alle' },
@@ -45,14 +47,17 @@ function matchesStatus(item: BoardItem, status: string): boolean {
 export function KeyBoard({
   items,
   categories,
+  depots,
   initial,
 }: {
   items: BoardItem[]
   categories: BoardCategory[]
-  initial: { status?: string; category?: string; q?: string }
+  depots: BoardDepot[]
+  initial: { status?: string; category?: string; depot?: string; q?: string }
 }) {
   const [status, setStatus] = useState(initial.status ?? 'all')
   const [category, setCategory] = useState(initial.category ?? 'all')
+  const [depot, setDepot] = useState(initial.depot ?? 'all')
   const [type, setType] = useState('all')
   const [query, setQuery] = useState(initial.q ?? '')
 
@@ -62,22 +67,24 @@ export function KeyBoard({
     const params = new URLSearchParams()
     if (status !== 'all') params.set('status', status)
     if (category !== 'all') params.set('category', category)
+    if (depot !== 'all') params.set('depot', depot)
     if (type !== 'all') params.set('type', type)
     if (query.trim()) params.set('q', query.trim())
     const search = params.toString()
     window.history.replaceState(null, '', search ? `/schluessel?${search}` : '/schluessel')
-  }, [status, category, type, query])
+  }, [status, category, depot, type, query])
 
   // Everything except the status filter — so the status counts stay meaningful.
   const base = useMemo(() => {
     const q = query.toLowerCase().trim()
     return items.filter((item) => {
       if (category !== 'all' && item.categoryId !== category) return false
+      if (depot !== 'all' && item.depotId !== depot) return false
       if (type !== 'all' && item.kind !== type) return false
       if (q && !item.search.includes(q)) return false
       return true
     })
-  }, [items, category, type, query])
+  }, [items, category, depot, type, query])
 
   const statusSegments: Segment[] = useMemo(
     () =>
@@ -92,6 +99,7 @@ export function KeyBoard({
     const scoped = items.filter((item) => {
       const q = query.toLowerCase().trim()
       if (type !== 'all' && item.kind !== type) return false
+      if (depot !== 'all' && item.depotId !== depot) return false
       if (q && !item.search.includes(q)) return false
       return matchesStatus(item, status)
     })
@@ -103,18 +111,24 @@ export function KeyBoard({
         count: scoped.filter((item) => item.categoryId === cat.id).length,
       })),
     ]
-  }, [items, categories, query, type, status])
+  }, [items, categories, query, type, depot, status])
 
   const visible = useMemo(
     () => base.filter((item) => matchesStatus(item, status)),
     [base, status],
   )
 
-  const filtered = status !== 'all' || category !== 'all' || type !== 'all' || query.trim() !== ''
+  const filtered =
+    status !== 'all' ||
+    category !== 'all' ||
+    depot !== 'all' ||
+    type !== 'all' ||
+    query.trim() !== ''
 
   const reset = () => {
     setStatus('all')
     setCategory('all')
+    setDepot('all')
     setType('all')
     setQuery('')
   }
@@ -131,6 +145,23 @@ export function KeyBoard({
             className="min-w-[14rem] flex-1 border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-army-red"
           />
           <SegmentedFilter segments={TYPE_SEGMENTS} value={type} onChange={setType} label="Typ" />
+          <label className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Verwahrung
+            </span>
+            <select
+              value={depot}
+              onChange={(e) => setDepot(e.target.value)}
+              className="border border-line bg-paper px-3 py-1.5 text-sm outline-none focus:border-army-red"
+            >
+              <option value="all">Alle</option>
+              {depots.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <SegmentedFilter
           segments={statusSegments}

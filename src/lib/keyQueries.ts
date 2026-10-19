@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import type { KeyBundle, KeyCategory, KeyCopy, User } from '@/payload-types'
+import type { KeyBundle, KeyCategory, KeyCopy, KeyDepot, User } from '@/payload-types'
 import { hasValidPsp, isOverdue } from './keyLabels'
 
 export type PersonOption = {
@@ -123,4 +123,40 @@ export function memberLabels(bundle: KeyBundle, copyById: Map<string, KeyCopy>):
   return (bundle.copies ?? [])
     .map((member) => copyById.get(String(refId(member)))?.label)
     .filter((label): label is string => Boolean(label))
+}
+
+export type DepotOccupancy = {
+  /** Copies assigned to this depot, whether or not they are currently out. */
+  total: number
+  /** Copies physically present: not issued, not lost. */
+  present: number
+  out: number
+  blocked: number
+}
+
+/** Depots plus how full each one is, derived from the copies already loaded. */
+export function depotOccupancy(copies: KeyCopy[]): Map<string, DepotOccupancy> {
+  const byDepot = new Map<string, DepotOccupancy>()
+  for (const copy of copies) {
+    const depot = refId(copy.depot)
+    if (!depot) continue
+    const entry = byDepot.get(depot) ?? { total: 0, present: 0, out: 0, blocked: 0 }
+    entry.total++
+    if (copy.status === 'ausgegeben' || copy.status === 'dauerausgabe') entry.out++
+    else if (['gesperrt', 'verloren', 'defekt'].includes(copy.status)) entry.blocked++
+    else entry.present++
+    byDepot.set(depot, entry)
+  }
+  return byDepot
+}
+
+export async function loadDepots(): Promise<KeyDepot[]> {
+  const payload = await payloadClient()
+  const { docs } = await payload.find({
+    collection: 'key-depots',
+    depth: 1,
+    limit: 200,
+    sort: 'name',
+  })
+  return docs as KeyDepot[]
 }

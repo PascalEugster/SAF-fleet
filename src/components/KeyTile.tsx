@@ -17,6 +17,7 @@ export type KeyTileData = {
   risk?: string | null
   marker?: string | null
   slot?: string | null
+  depot?: string | null
 }
 
 /** One hook on the board: green = hanging, red = out, amber = overdue. */
@@ -72,8 +73,10 @@ export function KeyTile({ data }: { data: KeyTileData }) {
             bei <span className="font-semibold text-ink">{data.holder}</span>
             {data.dueAt ? ` · bis ${formatDateTime(data.dueAt)}` : ' · Dauerausgabe'}
           </p>
-        ) : data.slot ? (
-          <p className="mt-2 text-xs text-muted">Platz {data.slot}</p>
+        ) : data.depot || data.slot ? (
+          <p className="mt-2 text-xs text-muted">
+            {[data.depot, data.slot ? `Platz ${data.slot}` : null].filter(Boolean).join(' · ')}
+          </p>
         ) : null}
       </div>
     </Link>

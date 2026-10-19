@@ -209,5 +209,6 @@ export async function seedDatabase(payload: Payload, { req }: SeedOpts = {}) {
     keys: keys.keys,
     keyCopies: keys.copies,
     keyBundles: keys.bundles,
+    keyDepots: keys.depots,
   }
 }

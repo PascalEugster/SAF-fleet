@@ -1,6 +1,6 @@
 # Spec: Schlüsselverwaltung
 
-> Status: **Phase 1 und 2 umgesetzt** · 19.10.2026 · Teil der bestehenden Applikation (Payload 3 + Next.js), keine separate App.
+> Status: **Phase 1, 2 und Verwahrung umgesetzt** · 19.10.2026 · Teil der bestehenden Applikation (Payload 3 + Next.js), keine separate App.
 
 Die Applikation verwaltet heute Fahrzeuge: Objekt → Person → Historie. Schlüssel folgen demselben Muster, brechen aber an drei Punkten mit dem Fahrzeugmodell (→ Kap. 3). Diese Spec beschreibt das Datenmodell, die Regeln und die Bedienung für alle übrigen Schlüssel einer Einheit — Zimmer, Materiallager, Waffenlokal, Anlage, Büro, Badge.
 
@@ -67,7 +67,28 @@ Konsequenz für die App: Verlust eines GHS ist kein Vorfall derselben Klasse wie
 7. **Verlust** — Meldung, Sperrung des Exemplars, Entscheid Umbau, Kostenfolge.
 8. **Dienstaustritt / Ende WK** — Rückgabekontrolle über alle Schlüssel einer Person. Der häufigste reale Fehler: Soldat fährt mit Schlüssel heim.
 
-### 2.5 Rechtlicher Rahmen (einzuhaltende Anker, nicht erschöpfend)
+### 2.5 Verwahrungs- und Verschlussarten
+
+Das Schlüsselbrett ist nur die sichtbarste Form. In einer Einheit kommen mehrere nebeneinander vor, mit unterschiedlichen Regeln:
+
+| Art | Was es ist | Verschluss | Typische Stufe | Besonderheit |
+|---|---|---|---|---|
+| **Schlüsselbrett** | offene Tafel mit Haken, meist mit Markensystem | offen, nur Aufsicht | keine | schnell, nur für Risikoklasse «Normal» |
+| **Schlüsselschrank** | abschliessbarer Stahlschrank mit nummerierten Haken | Schlüssel oder Code | EN 14450 S1/S2 | der Schlüssel zum Schrank ist selbst zu verwalten |
+| **Schlüsseltresor** | Wertschutzschrank für Schlüssel | Doppelbart plus Zahlenschloss | EN 1143-1 Grad 0–5 | für Waffen-, Munitions- und Anlagenschlüssel |
+| **Elektronisches Ausgabesystem** | Ausgabeautomat, jeder Schlüssel an einem Chip-Anhänger | Badge, PIN oder Biometrie | S2 und höher | gibt selbst frei und protokolliert automatisch — keine Quittung von Hand |
+| **Objektdepot** | Depot an der Aussenwand für Dritte, etwa die Feuerwehr | Schliessung der Einsatzkräfte | Klasse 1–3 | Zugriff durch Dritte, Sabotagekontakt auf die Alarmanlage, meldepflichtig |
+| **Siegelschrank** | Behälter für versiegelte Notschlüssel | Siegel | je nach Inhalt | nicht die Ausgabe, der Siegelbruch ist das Ereignis |
+| **Panzerschrank** | Behälter für klassifizierte Dokumente, hält auch Schlüssel | Doppelbart plus Code | Grad 0 und höher | fällt zusätzlich unter den Informationsschutz |
+| **Mobil** | Schlüsselbund am Mann | keiner | keine | faktisch Dauerausgabe, gehört trotzdem erfasst |
+| **Elektronische Berechtigung** | Badge, Transponder, mechatronischer Schlüssel, Code | kein physischer Ort | — | bei Verlust wird gesperrt und ausprogrammiert statt umgebaut |
+
+Zwei Befunde prägen das Modell:
+
+1. **Der Verwahrungsort ist das schwächste Glied.** Das Oberverwaltungsgericht Münster hat für Waffenschrankschlüssel entschieden, dass sie in einem Behältnis liegen müssen, das demselben Sicherheitsstandard genügt wie das, was der Schlüssel öffnet. Ein Tresorschlüssel im Schreibtisch macht den Tresor wertlos.
+2. **Elektronische Berechtigungen kehren die Verlustrechnung um.** Beim mechanischen Schlüssel kostet der Verlust den Zylindertausch, bei der elektronischen Berechtigung nur einen Eintrag: sperren und aus den betroffenen Zylindern ausprogrammieren.
+
+### 2.6 Rechtlicher Rahmen (einzuhaltende Anker, nicht erschöpfend)
 
 - **ISG / ISV** (Informationssicherheitsgesetz und -verordnung, in Kraft seit 1.1.2024, ersetzen die Informationsschutzverordnung ISchV SR 510.411): Behandlung klassifizierter Informationen → betrifft Schlüssel zu Panzerschränken und Archiven.
 - **Anlageschutzverordnung** (2.5.1990): Schutzzonen 1/2/3 militärischer Anlagen.
@@ -247,7 +268,32 @@ Analog zur Fahrzeuglogik: Status wird vom Hook geführt, nie von Hand gesetzt �
 }
 ```
 
-### 4.10 Erweiterung `users`
+### 4.10 `key-depots` — Verwahrung
+
+```ts
+{
+  name: text (required, unique)
+  type: select<brett|schrank|tresor|ausgabesystem|objektdepot
+             |siegelschrank|panzerschrank|mobil|elektronisch>
+  lockType: select<offen|schluessel|zahlenschloss|schluessel_und_code
+                 |doppelverschluss|badge|biometrie|siegel>
+  securityLevel: select<keine|s1|s2|grad0|grad1|grad2>   // EN 14450 / EN 1143-1
+  location: text
+  custodian: rel → users
+  capacity: number                   // Haken oder Fächer, leer = unbegrenzt
+  systemReference: text              // Gerätenummer bei Automat/Objektdepot
+  selfService: checkbox              // Automat gibt frei und protokolliert
+  externalAccess: checkbox           // Zugriff durch Dritte, z.B. Feuerwehr
+  tamperMonitored: checkbox
+  codeChangedAt: date
+  codeIntervalDays: number
+  notes: textarea
+}
+```
+
+`key-copies` erhält `depot` (Relation) neben dem bestehenden `storageSlot`, das nun den Platz *innerhalb* der Verwahrung bezeichnet. `keys` erhält `requiresSeparateStorage`, bei Risikoklasse «Hoch» automatisch gesetzt.
+
+### 4.11 Erweiterung `users`
 
 ```ts
 {
@@ -273,7 +319,11 @@ Analog zur Fahrzeuglogik: Status wird vom Hook geführt, nie von Hand gesetzt �
 7. **Siegel**: `seal.sealed: true → false` erzwingt Grundangabe und schreibt `siegel_gebrochen`.
 8. **Bund**: Zuweisung/Rücknahme auf `key-bundles` kaskadiert über `afterChange` auf alle `copies`, mit `context.fromBundle = true`, damit nicht n Einzelereignisse entstehen.
 9. **Verlust**: Anlegen eines `key-incidents` mit `type: verlust|diebstahl` setzt das Exemplar auf `gesperrt` und füllt `impact` aus Hierarchiestufe + Anlage.
-10. **Historie überlebt Löschung**: `personName`/`keyLabel`/`actorName` werden beim Schreiben als Snapshot mitgegeben — gleiches Muster wie `usageHistory.userName`.
+10. **Schwächstes Glied**: Ein Exemplar kann nur einer Verwahrung zugeordnet werden, deren Sicherheitsstufe mindestens der Exposition des Schlüssels entspricht — Schutzzone 2/3 → Grad 0, Risiko «Hoch» → S2, «Erhöht» → S1. Elektronische Berechtigungen sind ausgenommen, ihr Schutz liegt im System.
+11. **Doppelverschluss**: Jede Ausgabe aus einer Verwahrung mit Doppelverschluss verlangt eine Zweitunterschrift, auch wenn der Schlüssel selbst nur «Erhöht» ist.
+12. **Getrennte Verwahrung**: Ein Schlüssel mit `requiresSeparateStorage` kann keinem Bund zugeordnet werden.
+13. **Verlust einer elektronischen Berechtigung** erzeugt die Massnahme «Berechtigung sperren» statt eines Zylindertauschs.
+14. **Historie überlebt Löschung**: `personName`/`keyLabel`/`actorName` werden beim Schreiben als Snapshot mitgegeben — gleiches Muster wie `usageHistory.userName`.
 
 ---
 
@@ -290,6 +340,7 @@ Leitgedanke: **Die App zeigt das Schlüsselbrett, das die Zentrale ohnehin vor s
 | `/schluessel/ruecknahme` | **Rücknahme**: ein Feld. Nummer scannen oder tippen → Karte mit Inhaber und Ausgabedatum → «Zurücknehmen». Danach Fokus zurück ins Feld (Serienrücknahme beim Abendrapport). |
 | `/schluessel/[id]` | Exemplar: Stammdaten, Stufe, Risiko, Schutzzone, aktueller Inhaber, Journal, Aktionen (Ausgeben, Zurücknehmen, Siegel brechen, Verlust melden, Sperren). |
 | `/schluessel/abschluss` | **Tagesabschluss / Wachübergabe**: alles, was draussen ist, überfällige zuoberst, Zähler Soll/Ist, Knopf «Übergabe quittieren» → Journal `uebergabe`. |
+| `/schluessel/depots` | **Verwahrung**: alle Aufbewahrungsorte mit Belegung, Verschlussart, Sicherheitsstufe, Verantwortlichem und fälligem Codewechsel. Detailseite zeigt den Bestand und was draussen ist. |
 | `/schluessel/inventur` | **Inventur**: Liste durchgehen, je Zeile «vorhanden» antippen, am Ende Differenzbericht. |
 | `/personen/[id]` | Erweiterung: Block «Schlüssel in Besitz» mit Fälligkeiten und Knopf «Alle zurücknehmen» (Austritt). |
 
@@ -327,10 +378,13 @@ Ein Bund wird in einem Vorgang ausgegeben, zurückgenommen und quittiert. Das Jo
 ### 7.5 Verlust-Impact
 Bei Verlustmeldung rechnet die App die Folge aus der Hierarchiestufe: ES → Zylindertausch; GS/HS → betroffene Gruppe(n) mit Türenliste; GHS → Hinweis «Umbau der Schliessanlage ‹Kaserne Ost› erforderlich» samt Anzahl betroffener Zylinder. Entscheid und Kostennotiz werden am Vorfall festgehalten.
 
-### 7.6 QR-Anhänger
+### 7.6 Schwächstes-Glied-Prüfung
+Die App verweigert, einen Schlüssel in einer zu schwachen Verwahrung abzulegen, und nennt beide Seiten der Rechnung: was der Schlüssel verlangt und was der Ort bietet. Das ist der Fehler, den die Praxis am häufigsten macht und den keine Liste von selbst aufdeckt.
+
+### 7.7 QR-Anhänger
 Druckbares Etikettenblatt: je Exemplar ein QR-Code mit der Exemplar-ID, neutral beschriftet (nur Nummer, nie «GHS»). Scan im Rücknahmefeld = fertig.
 
-### 7.7 Marke/Pfand-Abgleich
+### 7.8 Marke/Pfand-Abgleich
 Optionales Feld `tagNumber`. Ist es gesetzt, verlangt die Ausgabe die Marke und die Rücknahme gibt sie zurück — damit Brett und App nicht auseinanderlaufen.
 
 ---
@@ -340,6 +394,9 @@ Optionales Feld `tagNumber`. Ist es gesetzt, verlangt die Ausgabe die Marke und 
 **Phase 1 — Kern · umgesetzt am 19.10.2026**
 Collections 4.1–4.7 und 4.10, Hooks 1–5 und 10, Schlüsselbrett, Ausgabe, Rücknahme, Exemplar-Detail, Dashboard-Kacheln, Seed-Daten (ca. 40 Schliessungen über alle sechs Kategorien, inkl. zwei Bünde und ein versiegelter Notschlüssel).
 → Das ist der demofähige Stand. Zusätzlich gebaut: Bund-Detailseite (nötig für die Rücknahme eines Bundes) und ein `keys`-Ziel im Reset-Tool.
+
+**Verwahrung — umgesetzt am 19.10.2026**
+`key-depots` mit neun Verwahrungsarten, Schwächstes-Glied-Prüfung, Doppelverschluss-Regel, getrennte Verwahrung, Codewechsel-Fälligkeit, Übersicht und Detailseite, Filter am Brett.
 
 **Phase 2 — Betrieb · umgesetzt am 19.10.2026**
 Tagesabschluss/Wachübergabe, Inventur, Vorfälle inkl. Impact (4.8, 4.9, Hooks 6–9), Personenblatt mit «Alle zurücknehmen», QR-Etiketten, Markenabgleich.
@@ -374,6 +431,11 @@ Die Liste in Kap. 2.2 braucht die Bestätigung eines Fachoffiziers, bevor sie al
 - Funktionsumfang Schlüsselverwaltungssoftware (Quittung, Rückgabefristen, Inventur, Verlustmanagement, Schliessplan): [SoftGuide, Schlüsselverwaltung](https://www.softguide.de/funktion/schluesselverwaltung) · [SoftGuide, Schlüssel- und Schloss-Management](https://www.softguide.de/funktion/schluessel-schloss-management)
 - Informationsschutz / klassifizierte Informationen: [Informationsschutzverordnung ISchV, SR 510.411](https://fedlex.data.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/2007/414/20210101/de/pdf-a/fedlex-data-admin-ch-eli-cc-2007-414-20210101-de-pdf-a.pdf) (per 1.1.2024 durch ISG/ISV ersetzt)
 - Schutzzonen und Personensicherheitsprüfung: [Verordnung über die Personensicherheitsprüfungen PSPV](https://fedlex.data.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/2011/155/20230901/de/pdf-a/fedlex-data-admin-ch-eli-cc-2011-155-20230901-de-pdf-a-2.pdf) (Zugang Schutzzone 2/3 militärischer Anlagen, Anlageschutzverordnung vom 2.5.1990)
+- Sicherheitsklassen für Schlüsselschränke und -tresore (EN 14450 S1/S2, EN 1143-1 Grad 0–5, VdS/ECB-S): [RS Online, Tresor-Leitfaden](https://de.rs-online.com/web/content/discovery-portal/produktratgeber/tresor-leitfaden)
+- Schlüsseldepots und ihre Klassen, Meldepflicht gegenüber dem Versicherer: [Baunetz Wissen, Schlüsseldepots](https://www.baunetzwissen.de/sicherheitstechnik/fachwissen/sicherheitsschraenke-depots/schluesseldepots-sd-164822) · [Merkblatt Feuerwehrschlüsseldepot, DIN 14675](https://www.unna.de/fileadmin/stadt/dokumente/internet/Rathaus/Feuerwehr/Infos_Downloads/Merkblatt_Feuerwehrschluesseldepot_DIN_14675.pdf)
+- Elektronisches Ausgabesystem, Schlüssel am Chip-Anhänger mit eigener ID und automatischem Protokoll: [Traka, iFobs](https://www.traka.com/global/en/products/accessories/ifobs)
+- Verlust einer elektronischen Berechtigung: sperren und ausprogrammieren statt Zylindertausch: [ASSA ABLOY Verso CLIQ](https://www.baulinks.de/webplugin/2005/1319.php4) · [CLIQ-Kurzanleitung RWTH Aachen](https://hci.rwth-aachen.de/keys)
+- Schlüssel sind so sicher zu verwahren wie das, was sie öffnen (OVG Münster, Az. 20 A 2384/20): [beck-aktuell](https://www.beck-aktuell.de/heute-im-recht/rechtsprechung/jaeger-darf-waffenrechtliche-erlaubnis-trotz-falscher-schluesselaufbewahrung-behalten-2023-08-30)
 - Getrennte Aufbewahrung von Waffenraum-Schlüsseln, Verbot am Schlüsselbund: [Vorschrift Sächsischer Justizvollzug](https://www.revosax.sachsen.de/vorschrift_gesamt/3467/35673.pdf) · Analogie US-Praxis: [Key control records, AR 190-11](https://www.archives.gov/records-mgmt/rcs/schedules/departments/department-of-defense/department-of-the-army/rg-au/daa-au-2012-0009_sf115.pdf)
 
 Nicht öffentlich und daher nicht belegt: Reglemente und Weisungen der Schweizer Armee zur Schlüsselverwaltung, Betriebsreglemente der Waffenplätze. Kap. 2.2–2.4 sind insoweit abgeleitet (siehe 2.1 und 9.4).

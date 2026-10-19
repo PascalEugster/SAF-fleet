@@ -1,5 +1,6 @@
 import React from 'react'
 import { SubNavLink, type NavItem } from '@/components/NavLink'
+import { codeChangeDue } from '@/lib/keyLabels'
 import { payloadClient } from '@/lib/keyQueries'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 export default async function KeySectionLayout({ children }: { children: React.ReactNode }) {
   const payload = await payloadClient()
 
-  const [overdue, incidents] = await Promise.all([
+  const [overdue, incidents, depots] = await Promise.all([
     payload.find({
       collection: 'key-copies',
       where: {
@@ -26,13 +27,17 @@ export default async function KeySectionLayout({ children }: { children: React.R
       limit: 1,
       depth: 0,
     }),
+    payload.find({ collection: 'key-depots', limit: 200, depth: 0 }),
   ])
+
+  const codeChanges = depots.docs.filter((depot) => codeChangeDue(depot)).length
 
   const items: NavItem[] = [
     { href: '/schluessel', label: 'Brett', exact: true },
     { href: '/schluessel/ausgabe', label: 'Ausgabe' },
     { href: '/schluessel/ruecknahme', label: 'Rücknahme' },
     { href: '/schluessel/abschluss', label: 'Abschluss', badge: overdue.totalDocs },
+    { href: '/schluessel/depots', label: 'Verwahrung', badge: codeChanges },
     { href: '/schluessel/inventur', label: 'Inventur' },
     { href: '/schluessel/vorfaelle', label: 'Vorfälle', badge: incidents.totalDocs },
     { href: '/schluessel/etiketten', label: 'Etiketten' },

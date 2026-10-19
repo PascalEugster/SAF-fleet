@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import React from 'react'
-import type { KeyCopy } from '@/payload-types'
+import type { KeyCopy, KeyDepot } from '@/payload-types'
 import { KeyBoard, type BoardItem } from '@/components/KeyBoard'
 import {
   isOverdue,
@@ -10,11 +10,28 @@ import {
   keyOf,
   userOf,
 } from '@/lib/keyLabels'
-import { bundleOverdue, bundleStatus, loadKeyScreen, memberLabels, refId } from '@/lib/keyQueries'
+import {
+  bundleOverdue,
+  bundleStatus,
+  loadDepots,
+  loadKeyScreen,
+  memberLabels,
+  refId,
+} from '@/lib/keyQueries'
 
 export const dynamic = 'force-dynamic'
 
-type SearchParams = Promise<{ category?: string; status?: string; q?: string }>
+type SearchParams = Promise<{
+  category?: string
+  status?: string
+  depot?: string
+  q?: string
+}>
+
+/** The populated depot of a copy, when it was loaded with enough depth. */
+function depotOf(ref: unknown): KeyDepot | null {
+  return ref && typeof ref === 'object' ? (ref as KeyDepot) : null
+}
 
 /** Which filter bucket a copy falls into — issued and on permanent issue are one. */
 function statusGroup(status: string): BoardItem['statusGroup'] {
@@ -25,8 +42,11 @@ function statusGroup(status: string): BoardItem['statusGroup'] {
 }
 
 export default async function KeyBoardPage({ searchParams }: { searchParams: SearchParams }) {
-  const { category, status, q } = await searchParams
-  const { copies, bundles, categories, copyById, memberIds } = await loadKeyScreen()
+  const { category, status, depot, q } = await searchParams
+  const [{ copies, bundles, categories, copyById, memberIds }, depots] = await Promise.all([
+    loadKeyScreen(),
+    loadDepots(),
+  ])
 
   const bundleItems: BoardItem[] = bundles.map((bundle) => {
     const members = (bundle.copies ?? [])
@@ -43,6 +63,8 @@ export default async function KeyBoardPage({ searchParams }: { searchParams: Sea
     return {
       kind: 'bundle' as const,
       categoryId: categoryIds[0] ?? null,
+      // A ring hangs in the depot of its first key.
+      depotId: refId(members[0]?.depot) ?? null,
       statusGroup: group,
       overdue: bundleOverdue(bundle),
       search: [
@@ -75,9 +97,11 @@ export default async function KeyBoardPage({ searchParams }: { searchParams: Sea
     .map((copy) => {
       const key = keyOf(copy.key)
       const holder = userOf(copy.currentHolder)
+      const depotDoc = depotOf(copy.depot)
       return {
         kind: 'copy' as const,
         categoryId: keyCategoryId(key?.category),
+        depotId: refId(copy.depot),
         statusGroup: statusGroup(copy.status),
         overdue: isOverdue(copy),
         search: [
@@ -87,6 +111,7 @@ export default async function KeyBoardPage({ searchParams }: { searchParams: Sea
           key?.opensLocation,
           copy.tagNumber,
           copy.storageSlot,
+          depotDoc?.name,
           holder?.name,
         ]
           .filter(Boolean)
@@ -105,6 +130,7 @@ export default async function KeyBoardPage({ searchParams }: { searchParams: Sea
           risk: key?.risk ?? null,
           marker: key?.hierarchy && key.hierarchy !== 'ES' ? key.hierarchy : null,
           slot: copy.storageSlot ?? null,
+          depot: depotDoc?.name ?? null,
         },
       }
     })
@@ -141,7 +167,8 @@ export default async function KeyBoardPage({ searchParams }: { searchParams: Sea
           name: cat.name,
           icon: cat.icon,
         }))}
-        initial={{ status, category, q }}
+        depots={depots.map((d) => ({ id: String(d.id), name: d.name }))}
+        initial={{ status, category, depot, q }}
       />
     </div>
   )

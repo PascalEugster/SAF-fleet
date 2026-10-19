@@ -1,5 +1,6 @@
 import { APIError, type CollectionConfig } from 'payload'
 import { logKeyEvent } from '../lib/keyEvents'
+import { PHYSICAL_MEDIA } from './KeyDepots'
 
 export const INCIDENT_TYPES = [
   { label: { de: 'Verlust', en: 'Loss' }, value: 'verlust' },
@@ -17,6 +18,10 @@ export const INCIDENT_MEASURES = [
   { label: { de: 'Zylinder tauschen', en: 'Replace cylinder' }, value: 'zylinder_tausch' },
   { label: { de: 'Gruppe umbauen', en: 'Rekey group' }, value: 'gruppe_umbau' },
   { label: { de: 'Schliessanlage umbauen', en: 'Rekey locking system' }, value: 'anlage_umbau' },
+  {
+    label: { de: 'Berechtigung sperren', en: 'Revoke credential' },
+    value: 'berechtigung_sperren',
+  },
   { label: { de: 'Keine Massnahme', en: 'No measure' }, value: 'keine' },
 ]
 
@@ -244,7 +249,15 @@ export const KeyIncidents: CollectionConfig = {
             req,
           })
 
-          if (data.type === 'defekt') {
+          // An electronic credential is revoked, not drilled out — the cost of a
+          // loss is a database entry, not a locksmith.
+          if (!PHYSICAL_MEDIA.includes(String(copy.medium)) && data.type !== 'defekt') {
+            data.impact =
+              `Elektronische Berechtigung für «${key.label}». Kein Zylindertausch nötig: ` +
+              'Berechtigung im System sperren und aus den betroffenen Zylindern ausprogrammieren. ' +
+              `Von dieser Schliessung sind ${ownCopies.totalDocs} Berechtigungen ausgegeben.`
+            data.measure = 'berechtigung_sperren'
+          } else if (data.type === 'defekt') {
             data.impact =
               `Defektes Exemplar. Kein Schliessungsrisiko — Ersatzexemplar beschaffen. ` +
               `Von «${key.label}» sind ${ownCopies.totalDocs} Exemplare erfasst.`

@@ -26,6 +26,7 @@ const MEASURE_OPTIONS = [
   { value: 'zylinder_tausch', label: 'Zylinder tauschen' },
   { value: 'gruppe_umbau', label: 'Gruppe umbauen' },
   { value: 'anlage_umbau', label: 'Schliessanlage umbauen' },
+  { value: 'berechtigung_sperren', label: 'Berechtigung sperren' },
   { value: 'keine', label: 'Keine — Schlüssel ist wieder da' },
 ]
 

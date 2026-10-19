@@ -1,5 +1,6 @@
 import { APIError, type CollectionConfig } from 'payload'
 import { logKeyEvent } from '../lib/keyEvents'
+import { LEVEL_LABEL, LEVEL_RANK, PHYSICAL_MEDIA, requiredLevelFor } from './KeyDepots'
 
 export const KEY_COPY_STATUS = [
   { label: { de: 'Am Brett', en: 'On the board' }, value: 'am_brett' },
@@ -134,8 +135,12 @@ export const KeyCopies: CollectionConfig = {
         {
           name: 'storageSlot',
           type: 'text',
-          label: { de: 'Platz am Brett', en: 'Board slot' },
-          admin: { placeholder: 'z.B. B-14', width: '33%' },
+          label: { de: 'Platz', en: 'Slot' },
+          admin: {
+            placeholder: 'z.B. B-14',
+            width: '33%',
+            description: { de: 'Haken oder Fach innerhalb der Verwahrung.', en: 'Hook or slot inside the depot.' },
+          },
         },
         {
           name: 'tagNumber',
@@ -144,6 +149,19 @@ export const KeyCopies: CollectionConfig = {
           admin: { placeholder: 'z.B. 214', width: '33%' },
         },
       ],
+    },
+    {
+      name: 'depot',
+      type: 'relationship',
+      relationTo: 'key-depots',
+      index: true,
+      label: { de: 'Verwahrung', en: 'Depot' },
+      admin: {
+        description: {
+          de: 'Wo das Exemplar liegt, wenn es nicht ausgegeben ist. Die Sicherheitsstufe der Verwahrung muss zum Risiko des Schlüssels passen.',
+          en: 'Where the copy lives when it is not issued. The depot must match the key’s exposure.',
+        },
+      },
     },
     {
       name: 'bundle',
@@ -311,6 +329,43 @@ export const KeyCopies: CollectionConfig = {
           throw new APIError(`Exemplar ${copyNumber} existiert für diese Schliessung bereits.`, 400)
         }
 
+        const medium = String(data.medium ?? originalDoc?.medium ?? 'mechanisch')
+        const bundleId = idOf('bundle' in data ? data.bundle : originalDoc?.bundle)
+
+        // A key that must be kept apart never hangs on a ring.
+        if (bundleId && (key as { requiresSeparateStorage?: boolean }).requiresSeparateStorage) {
+          throw new APIError(
+            `${data.label} ist getrennt zu verwahren und darf nicht an einem Schlüsselbund geführt werden.`,
+            400,
+          )
+        }
+
+        // The depot is the weakest link: it must be at least as strong as the
+        // key it holds. Electronic credentials are exempt — their protection
+        // lives in the system, not in the cupboard.
+        const depotId = idOf('depot' in data ? data.depot : originalDoc?.depot)
+        if (depotId && PHYSICAL_MEDIA.includes(medium)) {
+          const depot = await req.payload.findByID({
+            collection: 'key-depots',
+            id: depotId,
+            depth: 0,
+            req,
+          })
+          const required = requiredLevelFor(
+            (key as { risk?: string }).risk,
+            (key as { protectionZone?: string }).protectionZone,
+          )
+          const have = String((depot as { securityLevel?: string }).securityLevel ?? 'keine')
+          if ((LEVEL_RANK[have] ?? 0) < (LEVEL_RANK[required] ?? 0)) {
+            throw new APIError(
+              `${data.label} verlangt mindestens «${LEVEL_LABEL[required]}». ` +
+                `«${(depot as { name: string }).name}» bietet «${LEVEL_LABEL[have]}». ` +
+                'Der Verwahrungsort wäre das schwächste Glied.',
+              400,
+            )
+          }
+        }
+
         const sealed = Boolean(('seal' in data ? data.seal?.sealed : originalDoc?.seal?.sealed) ?? false)
         const sealNumber = ('seal' in data ? data.seal?.sealNumber : originalDoc?.seal?.sealNumber) ?? null
 
@@ -360,7 +415,6 @@ export const KeyCopies: CollectionConfig = {
             throw new APIError(`${data.label} ${BLOCK_REASON[from] ?? 'kann nicht ausgegeben werden'}.`, 400)
           }
 
-          const bundleId = idOf('bundle' in data ? data.bundle : originalDoc?.bundle)
           if (bundleId && !req.context?.fromBundle) {
             throw new APIError(
               `${data.label} gehört zu einem Schlüsselbund. Ausgabe bitte über den Bund buchen.`,
@@ -411,14 +465,26 @@ export const KeyCopies: CollectionConfig = {
             }
           }
 
-          // High-risk keys need a second person on the receipt.
-          if ((key as { requiresFourEyes?: boolean }).requiresFourEyes) {
+          // High-risk keys — and depots under double lock — need a second person.
+          let fourEyes = Boolean((key as { requiresFourEyes?: boolean }).requiresFourEyes)
+          let fourEyesReason = `${data.label} unterliegt dem Vier-Augen-Prinzip`
+          if (!fourEyes && depotId) {
+            const depot = await req.payload.findByID({
+              collection: 'key-depots',
+              id: depotId,
+              depth: 0,
+              req,
+            })
+            if ((depot as { lockType?: string }).lockType === 'doppelverschluss') {
+              fourEyes = true
+              fourEyesReason = `«${(depot as { name: string }).name}» steht unter Doppelverschluss`
+            }
+          }
+
+          if (fourEyes) {
             const second = idOf('secondSignature' in data ? data.secondSignature : originalDoc?.secondSignature)
             if (!second) {
-              throw new APIError(
-                `${data.label} unterliegt dem Vier-Augen-Prinzip. Zweitunterschrift erforderlich.`,
-                400,
-              )
+              throw new APIError(`${fourEyesReason}. Zweitunterschrift erforderlich.`, 400)
             }
             if (String(second) === String(newHolder)) {
               throw new APIError('Zweitunterschrift muss von einer anderen Person stammen.', 400)

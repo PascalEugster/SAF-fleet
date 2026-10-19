@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import React from 'react'
-import type { KeyBundle, KeyCopy, KeyEvent, KeyIncident } from '@/payload-types'
+import type { KeyBundle, KeyCopy, KeyDepot, KeyEvent, KeyIncident } from '@/payload-types'
 import { KeyStatusBadge } from '@/components/KeyStatusBadge'
 import { KeyAssignPanel } from '@/components/KeyAssignPanel'
 import { formatDateTime } from '@/lib/labels'
 import {
+  DEPOT_TYPE_LABELS,
+  SECURITY_LEVEL_LABELS,
   INCIDENT_MEASURE_LABELS,
   INCIDENT_STATUS_LABELS,
   INCIDENT_TYPE_LABELS,
@@ -76,6 +78,8 @@ export default async function KeyCopyDetailPage({
   const second = userOf(copy!.secondSignature)
   const bundle =
     copy!.bundle && typeof copy!.bundle === 'object' ? (copy!.bundle as KeyBundle) : null
+  const depot =
+    copy!.depot && typeof copy!.depot === 'object' ? (copy!.depot as KeyDepot) : null
   const overdue = isOverdue(copy!)
   const openIncident = (incidents as KeyIncident[]).find((i) => i.status !== 'erledigt') ?? null
 
@@ -132,7 +136,25 @@ export default async function KeyCopyDetailPage({
               />
               {key?.requiresPsp && <Row label="Auflage" value="Gültige PSP erforderlich" />}
               {key?.requiresFourEyes && <Row label="Auflage" value="Vier-Augen-Prinzip" />}
-              {copy!.storageSlot && <Row label="Platz am Brett" value={copy!.storageSlot} />}
+              {depot && (
+                <div className="grid grid-cols-3 gap-2 p-4">
+                  <dt className="text-sm text-muted">Verwahrung</dt>
+                  <dd className="col-span-2 text-sm">
+                    <Link
+                      href={`/schluessel/depots/${depot.id}`}
+                      className="font-medium hover:text-army-red hover:underline"
+                    >
+                      {depot.name}
+                    </Link>
+                    <span className="text-muted">
+                      {' '}
+                      · {DEPOT_TYPE_LABELS[depot.type] ?? depot.type} ·{' '}
+                      {SECURITY_LEVEL_LABELS[depot.securityLevel] ?? depot.securityLevel}
+                    </span>
+                  </dd>
+                </div>
+              )}
+              {copy!.storageSlot && <Row label="Platz" value={copy!.storageSlot} />}
               {copy!.tagNumber && <Row label="Marke / Pfand" value={copy!.tagNumber} />}
               {bundle && <Row label="Teil von Bund" value={bundle.label} />}
               {copy!.seal?.sealNumber && (

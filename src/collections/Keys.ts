@@ -155,10 +155,22 @@ export const Keys: CollectionConfig = {
               type: 'checkbox',
               label: { de: 'Vier-Augen-Prinzip', en: 'Four-eyes principle' },
               admin: {
-                width: '50%',
+                width: '25%',
                 description: {
                   de: 'Wird bei Risikoklasse «Hoch» automatisch gesetzt.',
                   en: 'Set automatically for high risk.',
+                },
+              },
+            },
+            {
+              name: 'requiresSeparateStorage',
+              type: 'checkbox',
+              label: { de: 'Getrennt verwahren', en: 'Keep separate' },
+              admin: {
+                width: '25%',
+                description: {
+                  de: 'Darf nicht an einem Schlüsselbund geführt werden. Wird bei Risikoklasse «Hoch» automatisch gesetzt.',
+                  en: 'Must not hang on a ring. Set automatically for high risk.',
                 },
               },
             },
@@ -183,7 +195,10 @@ export const Keys: CollectionConfig = {
       ({ data }) => {
         // Security requirements follow from zone and risk — never silently weaker.
         if (PSP_ZONES.includes(String(data.protectionZone))) data.requiresPsp = true
-        if (data.risk === 'hoch') data.requiresFourEyes = true
+        if (data.risk === 'hoch') {
+          data.requiresFourEyes = true
+          data.requiresSeparateStorage = true
+        }
         return data
       },
     ],

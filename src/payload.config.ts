@@ -13,6 +13,7 @@ import { Vehicles } from './collections/Vehicles'
 import { Categories } from './collections/Categories'
 import { LockingSystems } from './collections/LockingSystems'
 import { KeyCategories } from './collections/KeyCategories'
+import { KeyDepots } from './collections/KeyDepots'
 import { Keys } from './collections/Keys'
 import { KeyCopies } from './collections/KeyCopies'
 import { KeyBundles } from './collections/KeyBundles'
@@ -48,6 +49,7 @@ export default buildConfig({
     KeyIncidents,
     KeyInventories,
     KeyCategories,
+    KeyDepots,
     LockingSystems,
     KeyEvents,
     Users,

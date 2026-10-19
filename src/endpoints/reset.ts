@@ -86,6 +86,7 @@ export const resetEndpoint: Endpoint = {
           'key-copies',
           'keys',
           'key-categories',
+          'key-depots',
           'locking-systems',
         ] as const) {
           const res = await payload.delete({ collection, where: { id: { exists: true } }, req })
